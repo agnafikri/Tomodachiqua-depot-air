@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Minus, Plus, Truck, Store } from 'lucide-react';
 import CustomerPicker from '../components/CustomerPicker.jsx';
 import { Badge, Button, Card, Input, Notice, PageHeader, Segmented } from '../components/ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../lib/api.mjs';
-import { digitsOnly, formatRupiah, formatTime, newRequestId, todayJakarta } from '../lib/format.mjs';
-import { useCustomers, useDebounced } from '../lib/hooks.mjs';
+import { digitsOnly, formatRupiah, formatTime, newRequestId } from '../lib/format.mjs';
+import { fieldErrorsFrom, useCustomers, useDebounced } from '../lib/hooks.mjs';
 
 const MAX_QTY = 1000;
 
@@ -14,7 +14,9 @@ export default function OrderPage() {
   return (
     <>
       <PageHeader title="Order" />
-      <div className="grid gap-5 lg:grid-cols-[26rem_1fr] lg:items-start">
+      {/* grid-cols-1 = minmax(0,1fr): kolom tidak boleh melebar mengikuti isi. Tanpa ini, di HP
+          halaman melebar (±576 px) dan browser menciutkan tampilan ("ter-zoom"). */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[26rem_minmax(0,1fr)] lg:items-start">
         <OrderForm />
         <TodayOrders />
       </div>
@@ -34,6 +36,7 @@ function OrderForm() {
   const [requestId, setRequestId] = useState(newRequestId);
   const [saved, setSaved] = useState(null);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const qty = qtyText === '' ? null : Number.parseInt(qtyText, 10);
   const qtyValid = qty != null && qty >= 1 && qty <= MAX_QTY;
@@ -43,7 +46,6 @@ function OrderForm() {
   function selectCustomer(c) {
     setCustomer(c);
     setIsDelivered(Boolean(c?.customPrice));
-    if (!c) setPayStatus('PAID');
   }
 
   const previewQty = debouncedQty != null && debouncedQty >= 1 && debouncedQty <= MAX_QTY ? debouncedQty : null;
@@ -67,13 +69,19 @@ function OrderForm() {
       setIsDelivered(false);
       setPayStatus('PAID');
       setNote('');
+      setFieldErrors({});
       setRequestId(newRequestId()); // order berikutnya = permintaan baru
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
     // requestId sengaja TIDAK diganti saat gagal: kirim ulang tidak akan membuat order ganda.
     onError: (err) => {
       setSaved(null);
-      setError(err.message);
+      if (err.code === 'VALIDATION_ERROR') {
+        setFieldErrors(fieldErrorsFrom(err));
+        setError('');
+      } else {
+        setError(err.message);
+      }
     },
   });
 
@@ -84,6 +92,11 @@ function OrderForm() {
       return;
     }
     setError('');
+    if (payStatus === 'DEBT' && !customer && !note.trim()) {
+      setFieldErrors({ note: 'Isi catatan: siapa yang berutang.' });
+      return;
+    }
+    setFieldErrors({});
     save.mutate();
   }
 
@@ -154,12 +167,18 @@ function OrderForm() {
           onChange={setPayStatus}
           options={[
             { value: 'PAID', label: 'Lunas' },
-            { value: 'DEBT', label: 'Utang', disabled: !customer },
+            { value: 'DEBT', label: 'Utang' },
           ]}
         />
-        {!customer && <p className="-mt-3 text-sm text-muted">Utang hanya untuk pelanggan bernama.</p>}
 
-        <Input label="Catatan (boleh kosong)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="Mis. bayar hari Jumat" />
+        <Input
+          label={payStatus === 'DEBT' && !customer ? 'Catatan: siapa yang berutang' : 'Catatan (boleh kosong)'}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          error={fieldErrors.note}
+          maxLength={200}
+          placeholder={payStatus === 'DEBT' && !customer ? 'Mis. Pak Dedi RT 3' : 'Mis. bayar hari Jumat'}
+        />
 
         <PriceSummary price={price} loading={qtyValid && !price && previewQty === qty && preview.isFetching} failed={qtyValid && preview.isError} />
 
@@ -192,14 +211,15 @@ function PriceSummary({ price, loading, failed }) {
 function TodayOrders() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const today = useMemo(todayJakarta, []);
-  const [date, setDate] = useState(today);
+  const [pickedDate, setPickedDate] = useState(null); // null = hari ini menurut server
   const [confirmId, setConfirmId] = useState(null);
   const [voidError, setVoidError] = useState('');
 
+  // Tanpa tanggal, server menjawab dengan "hari ini" menurut jamnya (zona Jakarta).
+  // Jam perangkat tidak dipakai, supaya tanggal selalu sama dengan yang dipakai saat order disimpan.
   const orders = useQuery({
-    queryKey: ['orders', date],
-    queryFn: () => api.get(`/api/orders?from=${date}&to=${date}`),
+    queryKey: ['orders', pickedDate],
+    queryFn: () => api.get(pickedDate ? `/api/orders?from=${pickedDate}&to=${pickedDate}` : '/api/orders'),
   });
 
   const voidOrder = useMutation({
@@ -212,9 +232,12 @@ function TodayOrders() {
     onError: (err) => setVoidError(err.message),
   });
 
-  useEffect(() => setConfirmId(null), [date]);
+  useEffect(() => setConfirmId(null), [pickedDate]);
 
-  const canVoid = user.role === 'ADMIN' || date === today;
+  const today = orders.data?.today;
+  const date = pickedDate ?? today ?? '';
+  const isToday = date === today;
+  const canVoid = user.role === 'ADMIN' || isToday;
   const list = orders.data?.orders ?? [];
   const summary = orders.data?.summary;
 
@@ -222,7 +245,7 @@ function TodayOrders() {
     <Card className="p-0">
       <div className="flex flex-wrap items-end justify-between gap-3 p-5 pb-3">
         <div>
-          <h2 className="text-lg font-extrabold text-ink">{date === today ? 'Order hari ini' : 'Daftar order'}</h2>
+          <h2 className="text-lg font-extrabold text-ink">{isToday ? 'Order hari ini' : 'Daftar order'}</h2>
           {summary && (
             <p className="text-sm text-muted">
               {summary.orderCount} order · {summary.gallons} galon · {formatRupiah(summary.total)}
@@ -232,7 +255,7 @@ function TodayOrders() {
         </div>
         <label className="text-sm font-semibold text-ink">
           <span className="sr-only">Tanggal</span>
-          <input type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-base" />
+          <input type="date" value={date} max={today} disabled={!today} onChange={(e) => e.target.value && setPickedDate(e.target.value === today ? null : e.target.value)} className="min-h-11 rounded-xl border border-line bg-white px-3 text-base" />
         </label>
       </div>
 
