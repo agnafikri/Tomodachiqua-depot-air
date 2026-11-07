@@ -2,7 +2,7 @@
 import { useSyncExternalStore } from 'react';
 
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
-const TIMEOUT_MS = 90_000; // server gratis butuh sekitar satu menit untuk bangun
+const TIMEOUT_MS = 90_000; // batas tunggu; server hosting bisa lambat saat pertama diakses
 const SLOW_AFTER_MS = 3_000;
 
 export class ApiError extends Error {

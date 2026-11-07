@@ -20,11 +20,6 @@ export function formatDateTime(value) {
   });
 }
 
-// Tanggal hari ini di Jakarta dalam format YYYY-MM-DD (untuk input tanggal dan filter API).
-export function todayJakarta() {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-}
-
 export function formatTime(value) {
   return formatDate(value, { hour: '2-digit', minute: '2-digit' });
 }
