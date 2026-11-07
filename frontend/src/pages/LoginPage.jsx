@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ApiError } from '../lib/api.mjs';
@@ -9,7 +9,6 @@ import Ripples, { DropMark } from '../components/Ripples.jsx';
 export default function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,7 +16,7 @@ export default function LoginPage() {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (user) return <Navigate to={location.state?.from || '/'} replace />;
+  if (user) return <Navigate to="/" replace />;
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,7 +30,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(username.trim(), password);
-      navigate(location.state?.from || '/', { replace: true });
+      navigate('/', { replace: true }); // selalu ke Beranda, bukan halaman terakhir akun sebelumnya
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : 'Terjadi kesalahan. Coba lagi.');
       setSubmitting(false);
@@ -51,7 +50,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <main className="-mt-6 rounded-t-3xl bg-canvas px-6 pt-8 pb-10 lg:mt-0 lg:flex lg:items-center lg:rounded-none lg:bg-white lg:px-14">
+      <main className="relative -mt-6 rounded-t-3xl bg-canvas px-6 pt-8 pb-10 lg:mt-0 lg:flex lg:items-center lg:rounded-none lg:bg-white lg:px-14">
         <form onSubmit={handleSubmit} noValidate className="mx-auto w-full max-w-sm space-y-5">
           <h2 className="text-2xl font-extrabold text-ink">Masuk</h2>
 
