@@ -65,7 +65,9 @@ beforeEach(() => {
           order: { id: 1, customerName: c?.name ?? null, qty: body.qty, total: price.total, paymentStatus: body.payStatus },
         });
       }
-      if (path.includes('/api/orders?')) return json(200, { orders: [], summary: { orderCount: 0, gallons: 0, total: 0, unpaid: 0 } });
+      if (path.includes('/api/orders') && method === 'GET') {
+        return json(200, { orders: [], summary: { orderCount: 0, gallons: 0, total: 0, unpaid: 0 }, today: '2026-11-07', range: { from: '2026-11-07', to: '2026-11-07' } });
+      }
       return json(404, { error: { code: 'NOT_FOUND', message: 'x' } });
     }),
   );
@@ -98,16 +100,31 @@ async function pickCustomer(name) {
 }
 
 describe('layar Order', () => {
-  it('awalnya Umum, diambil, lunas; utang tidak bisa dipilih untuk Umum', async () => {
+  it('awalnya Umum, diambil, lunas; tanggal daftar order mengikuti server', async () => {
     renderApp('/order');
     await screen.findByRole('textbox', { name: 'Jumlah galon' });
     expect(radio('Diambil').getAttribute('aria-checked')).toBe('true');
     expect(radio('Lunas').getAttribute('aria-checked')).toBe('true');
-    expect(radio('Utang').disabled).toBe(true);
     expect(await screen.findByText('Rp 5.000')).toBeTruthy();
+    expect(await screen.findByText('Order hari ini')).toBeTruthy();
+    expect(screen.getByLabelText('Tanggal').value).toBe('2026-11-07');
+  });
 
-    await pickCustomer('Pak Budi');
-    await waitFor(() => expect(radio('Utang').disabled).toBe(false));
+  it('pelanggan Umum boleh utang, tetapi catatan (siapa yang berutang) wajib', async () => {
+    renderApp('/order');
+    await screen.findByText('Rp 5.000');
+    expect(radio('Utang').disabled).toBe(false);
+    fireEvent.click(radio('Utang'));
+    expect(screen.getByLabelText('Catatan: siapa yang berutang')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan order' }));
+    expect(await screen.findByText('Isi catatan: siapa yang berutang.')).toBeTruthy();
+    expect(posts).toHaveLength(0);
+
+    fireEvent.change(screen.getByLabelText('Catatan: siapa yang berutang'), { target: { value: 'Pak Dedi RT 3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan order' }));
+    expect(await screen.findByText(/Order tersimpan/)).toBeTruthy();
+    expect(posts[0]).toMatchObject({ customerId: null, payStatus: 'DEBT', note: 'Pak Dedi RT 3' });
   });
 
   it('pelanggan harga khusus: default diantar, total memakai harga custom dan diskon paket, lalu tersimpan', async () => {
