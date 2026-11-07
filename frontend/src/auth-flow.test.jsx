@@ -108,4 +108,39 @@ describe('alur login dan logout', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Keluar' })[0]);
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Masuk' })).toBeTruthy());
   });
+
+  it('logout dari halaman khusus admin lalu login sebagai pemilik: mendarat di Beranda, bukan halaman admin', async () => {
+    session = USERS.admin;
+    renderApp('/admin/impor-ekspor');
+    expect(await screen.findByRole('heading', { name: 'Impor dan ekspor' })).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Keluar' })[0]);
+    await screen.findByRole('heading', { name: 'Masuk' });
+
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'abah' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'benar123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Masuk' }));
+
+    expect(await screen.findByText('Halo, Abah')).toBeTruthy();
+    expect(screen.queryByText('Halaman ini khusus admin')).toBeNull();
+  });
+
+  it('login ulang sebagai akun yang sama pun mendarat di Beranda, bukan halaman terakhir', async () => {
+    session = USERS.abah;
+    renderApp('/stok');
+    await screen.findByRole('heading', { name: 'Stok' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Keluar' })[0]);
+    await screen.findByRole('heading', { name: 'Masuk' });
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'abah' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'benar123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Masuk' }));
+    expect(await screen.findByText('Halo, Abah')).toBeTruthy();
+  });
+
+  it('layar memuat tidak menyebut "server gratis"', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {}))); // permintaan tidak pernah selesai
+    renderApp('/');
+    expect(await screen.findByText('Memuat data…')).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/gratis|satu menit/i);
+  });
 });
