@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { LoaderCircle, ShieldAlert, WifiOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { Button } from './ui.jsx';
@@ -17,13 +17,10 @@ export function FullScreenMessage({ icon: Icon, title, children, action }) {
 // Semua halaman di dalam wajib login.
 export function RequireAuth() {
   const { user, isLoading, error, retry } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return (
-      <FullScreenMessage icon={LoaderCircle} title="Memuat…">
-        Server gratis kadang perlu waktu sekitar satu menit untuk bangun.
-      </FullScreenMessage>
+      <FullScreenMessage icon={LoaderCircle} title="Memuat data…" />
     );
   }
   if (error) {
@@ -37,7 +34,8 @@ export function RequireAuth() {
       </FullScreenMessage>
     );
   }
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // Tanpa "state from": setelah login siapa pun selalu mendarat di Beranda.
+  if (!user) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 
