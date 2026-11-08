@@ -1,10 +1,3 @@
-// SATU-SATUNYA tempat aturan harga. Fungsi murni: tanpa database, mudah diuji.
-//
-// Aturan:
-//  - Harga satuan = harga custom pelanggan (final, berlaku diantar maupun diambil),
-//    jika tidak ada: Rp 5.000 (diambil) atau Rp 6.000 (diantar).
-//  - Diskon paket (beli X bayar Y): galon dibayar = qty - floor(qty / X) * (X - Y).
-//  - Total = galon dibayar x harga satuan.
 import { AppError } from '../errors.mjs';
 
 export const DEFAULT_PRICES = Object.freeze({ pickup: 5000, delivery: 6000 });

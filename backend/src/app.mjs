@@ -8,6 +8,8 @@ import { errorHandler, notFound } from './middleware/errorHandler.mjs';
 import { requireCsrfHeader } from './middleware/requireCsrfHeader.mjs';
 import adminRouter from './routes/admin.mjs';
 import { authRouter } from './routes/auth.mjs';
+import customersRouter from './routes/customers.mjs';
+import ordersRouter from './routes/orders.mjs';
 
 export function createApp({ loginMax = 10 } = {}) {
   const app = express();
@@ -40,6 +42,8 @@ export function createApp({ loginMax = 10 } = {}) {
 
   app.use('/api', requireCsrfHeader);
   app.use('/api/auth', authRouter({ loginMax }));
+  app.use('/api/customers', customersRouter);
+  app.use('/api/orders', ordersRouter);
   app.use('/api/admin', adminRouter);
 
   app.use(notFound);

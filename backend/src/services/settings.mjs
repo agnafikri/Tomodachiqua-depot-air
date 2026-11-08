@@ -1,7 +1,7 @@
 import { query } from '../db/pool.mjs';
 import { DEFAULT_PRICES } from './pricing.mjs';
 
-// Harga standar dibaca dari tabel settings (bisa diubah tanpa mengubah kode).
+// Harga standar dibaca dari tabel settings.
 export async function getPrices(db = { query }) {
   const { rows } = await db.query(
     "SELECT key, value FROM settings WHERE key IN ('price_pickup', 'price_delivery')",
