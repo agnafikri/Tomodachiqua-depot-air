@@ -1,5 +1,6 @@
-import { forwardRef, useId } from 'react';
-import { LoaderCircle } from 'lucide-react';
+import { forwardRef, useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { LoaderCircle, X } from 'lucide-react';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -93,6 +94,106 @@ export function PageHeader({ title, children }) {
       <h1 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h1>
       {children && <p className="mt-1 text-base text-muted">{children}</p>}
     </header>
+  );
+}
+
+export function Badge({ tone = 'neutral', children }) {
+  const tones = {
+    neutral: 'bg-canvas text-muted',
+    brand: 'bg-brand-soft text-brand-dark',
+    ok: 'bg-ok-soft text-ok',
+    danger: 'bg-danger-soft text-danger',
+  };
+  return <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold', tones[tone])}>{children}</span>;
+}
+
+// Pilihan satu dari beberapa (mis. Diantar / Diambil). Tombol besar untuk jempol.
+export function Segmented({ label, value, onChange, options }) {
+  const labelId = useId();
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-semibold text-ink" id={labelId}>
+        {label}
+      </p>
+      <div role="radiogroup" aria-labelledby={labelId} className="grid gap-1.5 rounded-2xl bg-canvas p-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+        {options.map((o) => (
+          <button
+            key={String(o.value)}
+            type="button"
+            role="radio"
+            aria-checked={value === o.value}
+            disabled={o.disabled}
+            onClick={() => onChange(o.value)}
+            className={cx(
+              'min-h-12 rounded-xl px-3 text-base font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+              value === o.value ? 'bg-brand text-white' : 'text-muted hover:bg-white',
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function Checkbox({ label, hint, className, ...props }) {
+  return (
+    <label className={cx('flex min-h-12 cursor-pointer items-center gap-3', className)}>
+      <input type="checkbox" className="size-6 shrink-0 accent-brand" {...props} />
+      <span>
+        <span className="block text-base font-semibold text-ink">{label}</span>
+        {hint && <span className="block text-sm text-muted">{hint}</span>}
+      </span>
+    </label>
+  );
+}
+
+// Lembar dialog: dari bawah di HP, di tengah di komputer. Esc dan ketuk latar untuk menutup.
+export function Sheet({ open, onClose, title, children }) {
+  const panelRef = useRef(null);
+  // onClose disimpan di ref agar efek di bawah hanya jalan saat dibuka/ditutup;
+  // jika tidak, setiap ketikan (render ulang) akan merebut fokus dari kolom pencarian.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previouslyFocused = document.activeElement;
+    const onKey = (e) => e.key === 'Escape' && onCloseRef.current();
+    document.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panelRef.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+      previouslyFocused?.focus?.();
+    };
+  }, [open]);
+
+  if (!open) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-40 flex items-end justify-center lg:items-center">
+      <div className="absolute inset-0 bg-ink/50" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        className="relative flex max-h-[92dvh] w-full flex-col rounded-t-3xl bg-white outline-none lg:max-w-lg lg:rounded-3xl"
+      >
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <h2 className="text-xl font-extrabold text-ink">{title}</h2>
+          <button onClick={onClose} aria-label="Tutup" className="flex size-11 items-center justify-center rounded-xl text-muted hover:bg-canvas">
+            <X className="size-6" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="overflow-y-auto px-5 pt-2 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">{children}</div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
