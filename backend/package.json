@@ -12,7 +12,7 @@
     "start": "node server.mjs",
     "migrate": "node src/db/migrate.mjs",
     "seed": "node src/db/seed.mjs",
-    "test": "node --test \"tests/*.test.mjs\""
+    "test": "node --test --test-concurrency=1 \"tests/*.test.mjs\""
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
