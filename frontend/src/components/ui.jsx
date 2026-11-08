@@ -8,6 +8,8 @@ const VARIANTS = {
   primary: 'bg-brand text-white hover:bg-brand-dark active:bg-brand-deep disabled:bg-brand/50',
   secondary: 'bg-white text-brand border border-brand-line hover:bg-brand-soft disabled:text-brand/50',
   danger: 'bg-danger text-white hover:opacity-90 disabled:opacity-50',
+  // Tombol bergaris merah untuk aksi pembatalan yang tidak boleh terlalu menonjol.
+  dangerOutline: 'border border-danger/40 bg-white text-danger hover:bg-danger-soft active:bg-danger-soft disabled:opacity-50',
   ghost: 'text-muted hover:bg-brand-soft hover:text-brand-dark',
 };
 
