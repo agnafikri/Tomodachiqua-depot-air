@@ -214,3 +214,145 @@ describe('utang pelanggan Umum (per order)', () => {
     assert.equal(after.total, after.customerTotal + after.umumTotal);
   });
 });
+
+describe('keringanan: kurang bayar dianggap lunas dengan catatan', () => {
+  const waivers = (orderId) => pool.query('SELECT amount, note, voided_at FROM debt_waivers WHERE order_id = $1 ORDER BY id', [orderId]);
+  const paidSum = async (orderId) =>
+    (await pool.query('SELECT COALESCE(SUM(amount), 0)::int AS s FROM payments WHERE order_id = $1 AND voided_at IS NULL', [orderId])).rows[0].s;
+
+  it('Umum: utang Rp 6.000, bayar Rp 5.000 + dianggap lunas: utang hilang, uang masuk tetap Rp 5.000', async () => {
+    at('2031-05-01T09:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Bu Siti RT 2' }); // 6.000
+    const r = await pay({ orderId: o.id, amount: 5000, waiveRemaining: true, note: 'Pelanggan hanya bawa Rp 5.000' });
+    assert.equal(r.status, 201, JSON.stringify(r.json));
+    assert.equal(r.json.payment.amount, 5000);
+    assert.equal(r.json.payment.waived, 1000);
+    assert.equal(r.json.payment.remainingDebt, 0);
+
+    const umum = (await h.api('/api/debts', { cookie: h.pemilik })).json.umumOrders;
+    assert.equal(umum.find((x) => x.orderId === o.id), undefined, 'tidak lagi tercatat sebagai utang');
+
+    assert.equal(await paidSum(o.id), 5000, 'pendapatan = uang yang benar-benar diterima');
+    const w = await waivers(o.id);
+    assert.equal(w.rows.length, 1);
+    assert.equal(w.rows[0].amount, 1000);
+    assert.equal(w.rows[0].note, 'Pelanggan hanya bawa Rp 5.000');
+
+    const list = await h.api('/api/orders?from=2031-05-01', { cookie: h.pemilik });
+    const row = list.json.orders.find((x) => x.id === o.id);
+    assert.equal(row.paymentStatus, 'PAID');
+    assert.equal(row.paidAmount, 5000);
+    assert.equal(row.waivedAmount, 1000);
+    assert.equal(list.json.summary.unpaid, 0, 'ringkasan belum dibayar tidak menghitung yang diringankan');
+  });
+
+  it('Umum: utang Rp 12.000, bayar Rp 10.000 + dianggap lunas', async () => {
+    at('2031-05-01T10:00');
+    const o = await makeOrder({ customerId: null, qty: 2, isDelivered: true, payStatus: 'DEBT', note: 'Pak Anto' }); // 12.000
+    const r = await pay({ orderId: o.id, amount: 10000, waiveRemaining: true, note: 'dibulatkan' });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.payment.waived, 2000);
+    assert.equal((await waivers(o.id)).rows[0].amount, 2000);
+  });
+
+  it('tanpa keringanan, kurang bayar tetap menyisakan utang (perilaku lama tidak berubah)', async () => {
+    at('2031-05-01T11:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Bu Tati' });
+    const r = await pay({ orderId: o.id, amount: 5000 });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.payment.waived, 0);
+    assert.equal(r.json.payment.remainingDebt, 1000);
+    assert.equal((await waivers(o.id)).rows.length, 0);
+    const umum = (await h.api('/api/debts', { cookie: h.pemilik })).json.umumOrders;
+    assert.equal(umum.find((x) => x.orderId === o.id).outstanding, 1000);
+  });
+
+  it('keringanan wajib catatan (kosong atau spasi ditolak)', async () => {
+    at('2031-05-01T12:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Pak Eko' });
+    for (const note of [undefined, '', '   ']) {
+      const r = await pay({ orderId: o.id, amount: 5000, waiveRemaining: true, ...(note === undefined ? {} : { note }) });
+      assert.equal(r.status, 400, `note=${JSON.stringify(note)}`);
+      assert.ok(r.json.error.details.some((d) => d.field === 'note'));
+    }
+    assert.equal(await paidSum(o.id), 0, 'penolakan tidak mencatat pembayaran apa pun');
+  });
+
+  it('bayar pas sama dengan utang: tidak ada keringanan yang tercatat', async () => {
+    at('2031-05-01T13:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Bu Lilis' });
+    const r = await pay({ orderId: o.id, amount: 6000, waiveRemaining: true, note: 'tidak perlu' });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.payment.waived, 0);
+    assert.equal((await waivers(o.id)).rows.length, 0);
+  });
+
+  it('jumlah bayar tetap harus ada dan tidak boleh melebihi utang walau ada keringanan', async () => {
+    at('2031-05-01T14:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Pak Joko' });
+    assert.equal((await pay({ orderId: o.id, amount: 0, waiveRemaining: true, note: 'x' })).status, 400);
+    assert.equal((await pay({ orderId: o.id, amount: 6001, waiveRemaining: true, note: 'x' })).status, 400);
+  });
+
+  it('pelanggan bernama: sisa seluruh utangnya dianggap lunas (order tertua dibayar dulu, sisanya diringankan)', async () => {
+    at('2031-05-02T09:00');
+    const c = await h.newCustomer('Keringanan', { customPrice: 4500 });
+    const a = await makeOrder(orderBody(c.id, 10)); // 45.000
+    at('2031-05-02T10:00');
+    const b = await makeOrder(orderBody(c.id, 5)); // 22.500
+    at('2031-05-02T11:00');
+    const o3 = await makeOrder(orderBody(c.id, 4)); // 18.000
+    at('2031-05-02T12:00');
+    const r = await pay({ customerId: c.id, amount: 50000, waiveRemaining: true, note: 'sepakat Rp 50.000 lunas', clientRequestId: crypto.randomUUID() });
+    assert.equal(r.status, 201);
+    assert.equal(r.json.payment.waived, 35500);
+    assert.equal(r.json.payment.remainingDebt, 0);
+    assert.equal(await listed(c.id), undefined);
+
+    assert.equal(await paidSum(a.id), 45000);
+    assert.equal(await paidSum(b.id), 5000);
+    assert.equal(await paidSum(o3.id), 0);
+    assert.equal((await waivers(a.id)).rows.length, 0);
+    assert.equal((await waivers(b.id)).rows[0].amount, 17500);
+    assert.equal((await waivers(o3.id)).rows[0].amount, 18000);
+
+    const d = await debtOf(c.id);
+    assert.equal(d.outstanding, 0);
+    const batch = d.payments.find((p) => p.source === 'DEBT');
+    assert.equal(batch.amount, 50000);
+    assert.equal(batch.waived, 35500);
+    assert.equal(batch.waiverNote, 'sepakat Rp 50.000 lunas');
+  });
+
+  it('membatalkan pembayaran ikut membatalkan keringanannya: utang kembali penuh', async () => {
+    at('2031-05-03T09:00');
+    const c = await h.newCustomer('Batal Keringanan');
+    await makeOrder(orderBody(c.id, 2, { isDelivered: false })); // 10.000
+    const r = await pay({ customerId: c.id, amount: 8000, waiveRemaining: true, note: 'kurang 2.000 dimaafkan' });
+    assert.equal(await listed(c.id), undefined);
+
+    const v = await h.api(`/api/payments/${r.json.payment.batchId}`, { method: 'PATCH', cookie: h.pemilik, body: { voided: true } });
+    assert.equal(v.status, 200);
+    assert.equal((await listed(c.id)).outstanding, 10000);
+    const w = await pool.query('SELECT voided_at FROM debt_waivers WHERE batch_id = $1', [r.json.payment.batchId]);
+    assert.ok(w.rows[0].voided_at);
+  });
+
+  it('membatalkan order ikut membatalkan keringanannya', async () => {
+    at('2031-05-03T10:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Pak Rudi' });
+    await pay({ orderId: o.id, amount: 5000, waiveRemaining: true, note: 'dimaafkan' });
+    assert.equal((await h.api(`/api/orders/${o.id}`, { method: 'PATCH', cookie: h.pemilik, body: { voided: true } })).status, 200);
+    assert.ok((await waivers(o.id)).rows[0].voided_at);
+  });
+
+  it('permintaan ganda dengan keringanan hanya tercatat sekali', async () => {
+    at('2031-05-04T09:00');
+    const o = await makeOrder({ customerId: null, qty: 1, isDelivered: true, payStatus: 'DEBT', note: 'Bu Nani' });
+    const body = { orderId: o.id, amount: 5000, waiveRemaining: true, note: 'dimaafkan', clientRequestId: crypto.randomUUID() };
+    const [x, y] = await Promise.all([pay(body), pay(body)]);
+    assert.deepEqual([x.status, y.status].sort(), [200, 201]);
+    assert.equal((await waivers(o.id)).rows.length, 1);
+    assert.equal(await paidSum(o.id), 5000);
+  });
+});

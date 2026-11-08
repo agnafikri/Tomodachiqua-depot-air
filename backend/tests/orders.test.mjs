@@ -31,6 +31,7 @@ async function login(username) {
 }
 
 async function cleanup() {
+  await pool.query("DELETE FROM debt_waivers WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
   await pool.query("DELETE FROM payments WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
   await pool.query("DELETE FROM orders WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
   await pool.query("DELETE FROM customers WHERE name LIKE 'ZZTEST%'");
