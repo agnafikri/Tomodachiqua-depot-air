@@ -35,3 +35,22 @@ export function newRequestId() {
   const hex = (n) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
   return `${hex(8)}-${hex(4)}-4${hex(3)}-a${hex(3)}-${hex(12)}`;
 }
+
+export function formatNumber(n) {
+  return rupiah.format(Math.trunc(Number(n) || 0));
+}
+
+export function formatLiters(n) {
+  return `${n < 0 ? '-' : ''}${formatNumber(Math.abs(n))} liter`;
+}
+
+const decimal = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 });
+export function formatDecimal(n) {
+  return decimal.format(Number(n) || 0);
+}
+
+export function daysLeftText(days) {
+  if (days == null) return null;
+  if (days < 1) return 'kurang dari 1 hari';
+  return `${formatDecimal(days)} hari`;
+}
