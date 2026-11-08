@@ -52,7 +52,9 @@ beforeEach(() => {
             { orderId: 11, orderedAt: '2026-11-01T02:00:00Z', qty: 10, total: 45000, paid: 0, outstanding: 45000, note: null },
             { orderId: 12, orderedAt: '2026-11-02T02:00:00Z', qty: 5, total: 22500, paid: 5000, outstanding: 17500, note: null },
           ],
-          payments: [{ batchId: 'b1', source: 'DEBT', amount: 5000, paidAt: '2026-11-07T01:00:00Z', orderIds: [12], byName: 'Abah', canVoid: true }],
+          payments: [
+            { batchId: 'b1', source: 'DEBT', amount: 5000, waived: 1000, waiverNote: 'hanya bawa segitu', paidAt: '2026-11-07T01:00:00Z', orderIds: [12], byName: 'Abah', canVoid: true },
+          ],
         });
       }
       if (path.endsWith('/api/payments') && method === 'POST') {
@@ -60,7 +62,9 @@ beforeEach(() => {
           failNextPayment = false;
           return Promise.reject(new TypeError('Failed to fetch'));
         }
-        const left = body.customerId ? debts.customers[0].outstanding - body.amount : debts.umumOrders[0].outstanding - body.amount;
+        const cur = body.customerId ? debts.customers[0].outstanding : debts.umumOrders[0].outstanding;
+        const waived = body.waiveRemaining && body.amount < cur ? cur - body.amount : 0;
+        const left = cur - body.amount - waived;
         if (body.customerId) {
           debts.customers[0].outstanding = left;
           if (left === 0) debts.customers = [];
@@ -68,8 +72,8 @@ beforeEach(() => {
           debts.umumOrders[0].outstanding = left;
           if (left === 0) debts.umumOrders = [];
         }
-        debts.totals.total -= body.amount;
-        return json(201, { payment: { batchId: 'new', amount: body.amount, allocations: [], remainingDebt: left, duplicate: false } });
+        debts.totals.total -= body.amount + waived;
+        return json(201, { payment: { batchId: 'new', amount: body.amount, waived, allocations: [], remainingDebt: left, duplicate: false } });
       }
       if (path.includes('/api/payments/') && method === 'PATCH') return json(200, { ok: true });
       if (path.endsWith('/api/tank')) return json(200, { tank });
@@ -287,5 +291,93 @@ describe('layar Stok toren', () => {
     await screen.findByText('Koreksi stok: sisa 5.000 liter');
     // dua catatan lain (air masuk, pribadi) punya tombol; koreksi tidak
     expect(screen.getAllByRole('button', { name: 'Batalkan' })).toHaveLength(2);
+  });
+});
+
+describe('keringanan: kurang bayar dianggap lunas', () => {
+  const openUmum = async () => {
+    renderApp('/utang');
+    fireEvent.click(await screen.findByRole('button', { name: 'Bayar' }));
+    return screen.findByRole('dialog', { name: 'Bayar utang umum' });
+  };
+  const amountInput = (dialog) => within(dialog).getByLabelText('Jumlah dibayar (Rp)');
+
+  it('pilihan "anggap lunas" hanya muncul bila jumlah kurang dari sisa utang', async () => {
+    const dialog = await openUmum(); // utang Rp 18.000
+    const option = () => within(dialog).queryByRole('checkbox', { name: /Anggap lunas/ });
+    expect(option()).toBeNull(); // belum diisi
+    fireEvent.change(amountInput(dialog), { target: { value: '5000' } });
+    expect(option()).toBeTruthy();
+    expect(within(dialog).getByText(/sisa Rp 13\.000 dimaafkan/)).toBeTruthy();
+    fireEvent.change(amountInput(dialog), { target: { value: '18000' } });
+    expect(option()).toBeNull(); // pas = lunas biasa
+    fireEvent.change(amountInput(dialog), { target: { value: '99999' } });
+    expect(option()).toBeNull(); // melebihi utang
+  });
+
+  it('catatan alasan wajib; setelah diisi tersimpan dan utang lunas', async () => {
+    const dialog = await openUmum();
+    fireEvent.change(amountInput(dialog), { target: { value: '5000' } });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Anggap lunas/ }));
+    expect(within(dialog).getByRole('button', { name: 'Catat dan anggap lunas' })).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Catat dan anggap lunas' }));
+    expect(await within(dialog).findByText('Isi catatan alasan keringanan.')).toBeTruthy();
+    expect(calls.filter(([, p]) => p === '/api/payments')).toHaveLength(0);
+
+    fireEvent.change(within(dialog).getByLabelText('Catatan alasan (wajib)'), { target: { value: 'Pelanggan hanya bawa Rp 5.000' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Catat dan anggap lunas' }));
+    expect(await within(dialog).findByText(/Sisa Rp 13\.000 dianggap lunas\. Utang lunas\./)).toBeTruthy();
+    const post = calls.find(([, p]) => p === '/api/payments');
+    expect(post[2]).toMatchObject({ orderId: 50, amount: 5000, waiveRemaining: true, note: 'Pelanggan hanya bawa Rp 5.000' });
+  });
+
+  it('tanpa mencentang, kurang bayar biasa: tidak mengirim keringanan dan sisa utang tetap', async () => {
+    const dialog = await openUmum();
+    fireEvent.change(amountInput(dialog), { target: { value: '5000' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Catat pembayaran' }));
+    expect(await within(dialog).findByText(/Sisa utang Rp 13\.000/)).toBeTruthy();
+    const post = calls.find(([, p]) => p === '/api/payments');
+    expect(post[2].waiveRemaining).toBeUndefined();
+    expect(post[2].note).toBeUndefined();
+  });
+
+  it('pelanggan bernama: sisa seluruh utang dimaafkan; pesan hasil tetap terlihat setelah lunas', async () => {
+    renderApp('/utang');
+    fireEvent.click(await screen.findByRole('button', { name: /Warung Bu Ani/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Warung Bu Ani' });
+    fireEvent.change(await within(dialog).findByLabelText('Jumlah dibayar (Rp)'), { target: { value: '50000' } });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Anggap lunas/ }));
+    fireEvent.change(within(dialog).getByLabelText('Catatan alasan (wajib)'), { target: { value: 'sepakat 50 ribu' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Catat dan anggap lunas' }));
+    expect(await within(dialog).findByText(/Sisa Rp 35\.500 dianggap lunas/)).toBeTruthy();
+  });
+
+  it('riwayat pembayaran menampilkan keringanan dan catatannya', async () => {
+    renderApp('/utang');
+    fireEvent.click(await screen.findByRole('button', { name: /Warung Bu Ani/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText(/\+ keringanan Rp 1\.000 \(dianggap lunas\)/)).toBeTruthy();
+    expect(within(dialog).getByText('“hanya bawa segitu”')).toBeTruthy();
+  });
+});
+
+describe('tombol aksi berbentuk tombol sungguhan', () => {
+  it('"Bayar" adalah tombol utama; "Batalkan" adalah tombol bergaris merah', async () => {
+    renderApp('/utang');
+    const bayar = await screen.findByRole('button', { name: 'Bayar' });
+    expect(bayar.className).toMatch(/bg-brand/);
+    expect(bayar.className).toMatch(/min-h-11/); // cukup besar untuk jempol
+    fireEvent.click(await screen.findByRole('button', { name: /Warung Bu Ani/ }));
+    const dialog = await screen.findByRole('dialog');
+    const batalkan = await within(dialog).findByRole('button', { name: 'Batalkan' });
+    expect(batalkan.className).toMatch(/border-danger/);
+    expect(batalkan.className).toMatch(/min-h-11/);
+  });
+
+  it('"Batalkan" di riwayat stok juga tombol bergaris merah', async () => {
+    renderApp('/stok');
+    const tombol = await screen.findAllByRole('button', { name: 'Batalkan' });
+    expect(tombol[0].className).toMatch(/border-danger/);
   });
 });
