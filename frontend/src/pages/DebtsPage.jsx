@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, Search } from 'lucide-react';
-import PaymentForm from '../components/PaymentForm.jsx';
+import PaymentForm, { paymentMessage } from '../components/PaymentForm.jsx';
 import { Badge, Button, Card, Notice, PageHeader, Sheet } from '../components/ui.jsx';
 import { api } from '../lib/api.mjs';
 import { formatDate, formatDateTime, formatRupiah } from '../lib/format.mjs';
@@ -94,9 +94,9 @@ export default function DebtsPage() {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-base font-extrabold text-danger">{formatRupiah(o.outstanding)}</p>
-                      <button onClick={() => setUmumOrder(o)} className="min-h-11 text-sm font-bold text-brand underline underline-offset-4">
+                      <Button className="mt-1 min-h-11 px-5 text-sm" onClick={() => setUmumOrder(o)}>
                         Bayar
-                      </button>
+                      </Button>
                     </div>
                   </li>
                 ))}
@@ -106,7 +106,7 @@ export default function DebtsPage() {
         </>
       )}
 
-      <CustomerDebtSheet customerId={customerId} onClose={() => setCustomerId(null)} />
+      <CustomerDebtSheet key={customerId ?? 'none'} customerId={customerId} onClose={() => setCustomerId(null)} />
 
       <Sheet open={umumOrder != null} onClose={() => setUmumOrder(null)} title="Bayar utang umum">
         {umumOrder && <UmumPayment order={umumOrder} onClose={() => setUmumOrder(null)} />}
@@ -118,11 +118,14 @@ export default function DebtsPage() {
 function UmumPayment({ order, onClose }) {
   // Data order diambil dari daftar; setelah dibayar sebagian, daftar diperbarui dan sisa utang mengikuti.
   const debts = useQuery({ queryKey: ['debts'], queryFn: () => api.get('/api/debts') });
+  const [lastPayment, setLastPayment] = useState(null);
   const current = debts.data?.umumOrders.find((o) => o.orderId === order.orderId);
   if (debts.data && !current) {
     return (
       <div className="space-y-4">
-        <Notice tone="ok">Utang ini sudah lunas.</Notice>
+        <Notice tone="ok" role="status">
+          {lastPayment ? paymentMessage(lastPayment) : 'Utang ini sudah lunas.'}
+        </Notice>
         <Button className="w-full" onClick={onClose}>
           Selesai
         </Button>
@@ -140,13 +143,14 @@ function UmumPayment({ order, onClose }) {
         <p className="mt-2 text-sm font-semibold text-muted">Sisa utang</p>
         <p className="text-3xl font-extrabold text-danger">{formatRupiah(o.outstanding)}</p>
       </div>
-      <PaymentForm target={{ orderId: o.orderId }} outstanding={o.outstanding} />
+      <PaymentForm target={{ orderId: o.orderId }} outstanding={o.outstanding} onPaid={setLastPayment} />
     </div>
   );
 }
 
 function CustomerDebtSheet({ customerId, onClose }) {
   const open = customerId != null;
+  const [lastPayment, setLastPayment] = useState(null);
   const detail = useQuery({
     queryKey: ['debt-customer', customerId],
     queryFn: () => api.get(`/api/debts/customers/${customerId}`),
@@ -167,9 +171,11 @@ function CustomerDebtSheet({ customerId, onClose }) {
           </div>
 
           {d.outstanding > 0 ? (
-            <PaymentForm target={{ customerId: d.customer.id }} outstanding={d.outstanding} />
+            <PaymentForm target={{ customerId: d.customer.id }} outstanding={d.outstanding} onPaid={setLastPayment} />
           ) : (
-            <Notice tone="ok">Tidak ada utang.</Notice>
+            <Notice tone="ok" role="status">
+              {lastPayment ? paymentMessage(lastPayment) : 'Tidak ada utang.'}
+            </Notice>
           )}
 
           {d.orders.length > 0 && (
@@ -239,15 +245,21 @@ function PaymentHistory({ payments }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-base font-bold text-ink">{formatRupiah(p.amount)}</p>
+                  {p.waived > 0 && (
+                    <p className="text-sm font-semibold text-warn">
+                      + keringanan {formatRupiah(p.waived)} (dianggap lunas)
+                    </p>
+                  )}
+                  {p.waiverNote && <p className="text-sm text-muted">“{p.waiverNote}”</p>}
                   <p className="text-sm text-muted">
                     {formatDateTime(p.paidAt)} · {p.byName}
                     {p.source === 'ORDER' && ' · dibayar saat order'}
                   </p>
                 </div>
                 {p.canVoid && confirmId !== key && (
-                  <button onClick={() => setConfirmId(key)} className="min-h-11 shrink-0 text-sm font-semibold text-muted underline underline-offset-4 hover:text-danger">
+                  <Button variant="dangerOutline" className="min-h-11 shrink-0 px-4 text-sm" onClick={() => setConfirmId(key)}>
                     Batalkan
-                  </button>
+                  </Button>
                 )}
               </div>
               {confirmId === key && (

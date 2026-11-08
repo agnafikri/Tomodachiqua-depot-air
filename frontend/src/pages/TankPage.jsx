@@ -169,9 +169,9 @@ function History() {
                   {item.note && <p className="text-sm text-muted">“{item.note}”</p>}
                 </div>
                 {item.canVoid && confirm !== key && (
-                  <button onClick={() => setConfirm(key)} className="min-h-11 shrink-0 text-sm font-semibold text-muted underline underline-offset-4 hover:text-danger">
+                  <Button variant="dangerOutline" className="min-h-11 shrink-0 px-4 text-sm" onClick={() => setConfirm(key)}>
                     Batalkan
-                  </button>
+                  </Button>
                 )}
               </div>
               {confirm === key && (

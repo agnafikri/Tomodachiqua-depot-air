@@ -295,13 +295,14 @@ function TodayOrders() {
                 <Badge tone={o.paymentStatus === 'PAID' ? 'ok' : o.paymentStatus === 'PARTIAL' ? 'warn' : 'danger'}>
                   {o.paymentStatus === 'PAID' ? 'Lunas' : o.paymentStatus === 'PARTIAL' ? 'Sebagian' : 'Utang'}
                 </Badge>
+                {o.waivedAmount > 0 && <p className="mt-0.5 text-xs text-muted">keringanan {formatRupiah(o.waivedAmount)}</p>}
               </div>
             </div>
 
             {canVoid && confirmId !== o.id && (
-              <button onClick={() => setConfirmId(o.id)} className="mt-1 min-h-11 text-sm font-semibold text-muted underline underline-offset-4 hover:text-danger">
+              <Button variant="dangerOutline" className="mt-2 min-h-11 px-4 text-sm" onClick={() => setConfirmId(o.id)}>
                 Batalkan order
-              </button>
+              </Button>
             )}
             {confirmId === o.id && (
               <div className="mt-2 flex flex-wrap items-center gap-2" role="group" aria-label="Konfirmasi pembatalan">
