@@ -3,10 +3,12 @@ import AppShell from './components/AppShell.jsx';
 import { RequireAuth, RequireRole } from './components/guards.jsx';
 import ComingSoonPage from './pages/ComingSoonPage.jsx';
 import CustomersPage from './pages/CustomersPage.jsx';
+import DebtsPage from './pages/DebtsPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderPage from './pages/OrderPage.jsx';
+import TankPage from './pages/TankPage.jsx';
 
 export default function App() {
   return (
@@ -20,8 +22,8 @@ export default function App() {
           {/* Dibuka untuk ADMIN dan PEMILIK; yang belum jadi = penampung (ComingSoon) */}
           <Route path="order" element={<OrderPage />} />
           <Route path="pelanggan" element={<CustomersPage />} />
-          <Route path="utang" element={<ComingSoonPage />} />
-          <Route path="stok" element={<ComingSoonPage />} />
+          <Route path="utang" element={<DebtsPage />} />
+          <Route path="stok" element={<TankPage />} />
           <Route path="laporan" element={<ComingSoonPage />} />
           <Route path="keuangan" element={<ComingSoonPage />} />
 
