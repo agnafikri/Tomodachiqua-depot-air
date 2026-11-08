@@ -1,0 +1,32 @@
+{
+  "name": "tomodachiqua-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "server.mjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "nodemon server.mjs",
+    "start": "node server.mjs",
+    "migrate": "node src/db/migrate.mjs",
+    "seed": "node src/db/seed.mjs",
+    "test": "node --test \"tests/*.test.mjs\""
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.3",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
