@@ -11,7 +11,8 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET minimal 32 karakter'),
   // Boleh lebih dari satu asal, dipisah koma.
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  SESSION_DAYS: z.coerce.number().int().positive().default(7),
+  // Lama sesi login sejak masuk (jam). Tidak diperpanjang otomatis.
+  SESSION_HOURS: z.coerce.number().positive().default(24),
 });
 
 const parsed = schema.safeParse(process.env);
