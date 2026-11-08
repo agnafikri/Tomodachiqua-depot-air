@@ -19,6 +19,8 @@
   --color-danger-soft: #fdecea;
   --color-ok: #0f7b4f;
   --color-ok-soft: #e4f5ec;
+  --color-warn: #b45309;
+  --color-warn-soft: #fef0dc;
 }
 
 html {
