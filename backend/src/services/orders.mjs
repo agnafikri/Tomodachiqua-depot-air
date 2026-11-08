@@ -9,7 +9,9 @@ const TZ = 'Asia/Jakarta';
 
 function toOrder(row) {
   const paidAmount = Number(row.paid_amount ?? 0);
+  const waivedAmount = Number(row.waived_amount ?? 0); // sisa utang yang dianggap lunas (keringanan)
   const total = row.total;
+  const settled = paidAmount + waivedAmount;
   return {
     id: Number(row.id),
     customerId: row.customer_id == null ? null : Number(row.customer_id),
@@ -21,7 +23,8 @@ function toOrder(row) {
     freeQty: row.qty - row.paid_qty,
     total,
     paidAmount,
-    paymentStatus: paidAmount >= total ? 'PAID' : paidAmount > 0 ? 'PARTIAL' : 'DEBT',
+    waivedAmount,
+    paymentStatus: settled >= total ? 'PAID' : settled > 0 ? 'PARTIAL' : 'DEBT',
     note: row.note,
     orderedAt: row.ordered_at,
     voidedAt: row.voided_at,
@@ -50,14 +53,18 @@ export async function priceFor({ customerId, qty, isDelivered }, db = { query })
 
 const ORDER_SELECT = `
   SELECT o.*, c.name AS customer_name, u.name AS created_by_name,
-         COALESCE(p.paid, 0) AS paid_amount
+         COALESCE(p.paid, 0) AS paid_amount, COALESCE(w.waived, 0) AS waived_amount
   FROM orders o
   LEFT JOIN customers c ON c.id = o.customer_id
   LEFT JOIN users u ON u.id = o.created_by
   LEFT JOIN LATERAL (
     SELECT SUM(amount) AS paid FROM payments
     WHERE order_id = o.id AND voided_at IS NULL
-  ) p ON TRUE`;
+  ) p ON TRUE
+  LEFT JOIN LATERAL (
+    SELECT SUM(amount) AS waived FROM debt_waivers
+    WHERE order_id = o.id AND voided_at IS NULL
+  ) w ON TRUE`;
 
 export async function getOrder(id, db = { query }) {
   const { rows } = await db.query(`${ORDER_SELECT} WHERE o.id = $1`, [id]);
@@ -127,7 +134,7 @@ export async function listOrders({ from, to, customerId }) {
       orderCount: s.orderCount + 1,
       gallons: s.gallons + o.qty,
       total: s.total + o.total,
-      unpaid: s.unpaid + Math.max(o.total - o.paidAmount, 0),
+      unpaid: s.unpaid + Math.max(o.total - o.paidAmount - o.waivedAmount, 0),
     }),
     { orderCount: 0, gallons: 0, total: 0, unpaid: 0 },
   );
@@ -154,6 +161,7 @@ export async function voidOrder(id, user) {
     const at = now();
     await client.query('UPDATE orders SET voided_at = $3, voided_by = $2 WHERE id = $1', [id, user.id, at]);
     await client.query('UPDATE payments SET voided_at = $2 WHERE order_id = $1 AND voided_at IS NULL', [id, at]);
+    await client.query('UPDATE debt_waivers SET voided_at = $2 WHERE order_id = $1 AND voided_at IS NULL', [id, at]);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});

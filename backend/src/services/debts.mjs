@@ -1,5 +1,9 @@
-// Utang = total order (tidak dibatalkan) - pembayaran (tidak dibatalkan). Selalu dihitung dari
-// tabel orders dan payments, tidak disimpan terpisah, sehingga daftar utang tidak bisa tidak cocok.
+// Utang = total order (tidak dibatalkan) - pembayaran - keringanan (keduanya tidak dibatalkan).
+// Selalu dihitung dari tabel orders, payments, dan debt_waivers, tidak disimpan terpisah,
+// sehingga daftar utang tidak bisa tidak cocok.
+//
+// Keringanan: bila pembayaran kurang dari sisa utang, Pemilik boleh menganggap sisanya lunas dengan
+// catatan alasan. Sisa itu dicatat di debt_waivers (BUKAN uang masuk).
 //
 // Pembayaran utang pelanggan bernama dialokasikan ke order TERTUA dulu. Utang pelanggan Umum
 // (tanpa nama) dibayar per order.
@@ -13,12 +17,16 @@ import { getCustomer } from './customers.mjs';
 const OPEN_ORDERS_SQL = `
   SELECT o.id, o.customer_id, o.ordered_at, o.qty, o.total, o.note,
          COALESCE(p.paid, 0)::int AS paid,
-         (o.total - COALESCE(p.paid, 0))::int AS outstanding
+         COALESCE(w.waived, 0)::int AS waived,
+         (o.total - COALESCE(p.paid, 0) - COALESCE(w.waived, 0))::int AS outstanding
   FROM orders o
   LEFT JOIN LATERAL (
     SELECT SUM(amount) AS paid FROM payments WHERE order_id = o.id AND voided_at IS NULL
   ) p ON TRUE
-  WHERE o.voided_at IS NULL AND o.total - COALESCE(p.paid, 0) > 0`;
+  LEFT JOIN LATERAL (
+    SELECT SUM(amount) AS waived FROM debt_waivers WHERE order_id = o.id AND voided_at IS NULL
+  ) w ON TRUE
+  WHERE o.voided_at IS NULL AND o.total - COALESCE(p.paid, 0) - COALESCE(w.waived, 0) > 0`;
 
 const toOpenOrder = (r) => ({
   orderId: Number(r.id),
@@ -26,6 +34,7 @@ const toOpenOrder = (r) => ({
   qty: r.qty,
   total: r.total,
   paid: r.paid,
+  waived: r.waived,
   outstanding: r.outstanding,
   note: r.note,
 });
@@ -78,10 +87,18 @@ export async function getCustomerDebt(customerId, user) {
      ORDER BY MIN(p.paid_at) DESC, MIN(p.id) DESC LIMIT 30`,
     [customerId],
   );
+  const waiverRows = await query(
+    `SELECT batch_id::text AS batch_id, SUM(amount)::int AS waived, MIN(note) AS note
+     FROM debt_waivers WHERE customer_id = $1 AND voided_at IS NULL GROUP BY batch_id`,
+    [customerId],
+  );
+  const waiverByBatch = Object.fromEntries(waiverRows.rows.map((w) => [w.batch_id, w]));
   const today = jakartaDate();
   const payments = pay.rows.map((r) => ({
     batchId: r.batch_id,
     source: r.batch_id ? 'DEBT' : 'ORDER', // ORDER = dibayar saat order dibuat
+    waived: waiverByBatch[r.batch_id]?.waived ?? 0,
+    waiverNote: waiverByBatch[r.batch_id]?.note ?? null,
     amount: r.amount,
     paidAt: r.paid_at,
     orderIds: r.order_ids.map(Number),
@@ -93,7 +110,7 @@ export async function getCustomerDebt(customerId, user) {
 }
 
 // Menyimpan pembayaran utang. Tepat salah satu dari customerId (alokasi order tertua dulu) atau orderId (satu order).
-export async function recordPayment({ customerId, orderId, amount, clientRequestId }, user) {
+export async function recordPayment({ customerId, orderId, amount, waiveRemaining = false, note = null, clientRequestId }, user) {
   const batchId = clientRequestId ?? randomUUID();
   const client = await pool.connect();
   try {
@@ -132,17 +149,33 @@ export async function recordPayment({ customerId, orderId, amount, clientRequest
 
     let left = amount;
     const at = now();
+    const remainders = []; // sisa tiap order setelah dibayar; dasar keringanan
     for (const row of open.rows) {
-      if (left === 0) break;
       const part = Math.min(row.outstanding, left);
-      await client.query(
-        'INSERT INTO payments (customer_id, order_id, amount, created_by, paid_at, batch_id) VALUES ($1, $2, $3, $4, $5, $6)',
-        [ownerId, row.id, part, user.id, at, batchId],
-      );
+      if (part > 0) {
+        await client.query(
+          'INSERT INTO payments (customer_id, order_id, amount, created_by, paid_at, batch_id) VALUES ($1, $2, $3, $4, $5, $6)',
+          [ownerId, row.id, part, user.id, at, batchId],
+        );
+      }
       left -= part;
+      if (row.outstanding - part > 0) remainders.push({ id: row.id, amount: row.outstanding - part });
+    }
+
+    // Keringanan: sisa utang (setelah pembayaran ini) dianggap lunas, wajib dengan catatan alasan.
+    let waived = 0;
+    if (waiveRemaining && remainders.length > 0) {
+      if (!note) throw new AppError(400, 'NOTE_REQUIRED', 'Isi catatan alasan keringanan.');
+      for (const r of remainders) {
+        await client.query(
+          'INSERT INTO debt_waivers (order_id, customer_id, amount, note, batch_id, created_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+          [r.id, ownerId, r.amount, note, batchId, user.id, at],
+        );
+        waived += r.amount;
+      }
     }
     await client.query('COMMIT');
-    return { ...(await summarizeBatch(batchId)), remainingDebt: totalDebt - amount, duplicate: false };
+    return { ...(await summarizeBatch(batchId)), waived, remainingDebt: totalDebt - amount - waived, duplicate: false };
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
@@ -153,9 +186,11 @@ export async function recordPayment({ customerId, orderId, amount, clientRequest
 
 async function summarizeBatch(batchId) {
   const { rows } = await query('SELECT order_id, amount FROM payments WHERE batch_id = $1 ORDER BY id', [batchId]);
+  const w = await query('SELECT COALESCE(SUM(amount), 0)::int AS waived FROM debt_waivers WHERE batch_id = $1 AND voided_at IS NULL', [batchId]);
   return {
     batchId,
     amount: rows.reduce((s, r) => s + r.amount, 0),
+    waived: w.rows[0].waived,
     allocations: rows.map((r) => ({ orderId: Number(r.order_id), amount: r.amount })),
   };
 }
@@ -173,7 +208,9 @@ export async function voidPaymentBatch(batchId, user) {
     if (user.role !== 'ADMIN' && jakartaDate(rows[0].paid_at) !== jakartaDate()) {
       throw new AppError(403, 'VOID_NOT_ALLOWED', 'Pembayaran hari sebelumnya hanya bisa dibatalkan oleh admin.');
     }
-    await client.query('UPDATE payments SET voided_at = $2 WHERE batch_id = $1 AND voided_at IS NULL', [batchId, now()]);
+    const at = now();
+    await client.query('UPDATE payments SET voided_at = $2 WHERE batch_id = $1 AND voided_at IS NULL', [batchId, at]);
+    await client.query('UPDATE debt_waivers SET voided_at = $2 WHERE batch_id = $1 AND voided_at IS NULL', [batchId, at]);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
