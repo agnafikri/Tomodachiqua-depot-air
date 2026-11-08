@@ -69,7 +69,8 @@ export const Input = forwardRef(function Input({ label, error, hint, className, 
 
 export function Card({ className, children, ...props }) {
   return (
-    <section className={cx('rounded-2xl border border-line bg-white p-5', className)} {...props}>
+    // Padding bawaan p-5 dilewati bila pemakai memberi padding sendiri (mis. p-0 untuk daftar tepi ke tepi).
+    <section className={cx('rounded-2xl border border-line bg-white', /(^|\s)p-\d/.test(className ?? '') ? '' : 'p-5', className)} {...props}>
       {children}
     </section>
   );
@@ -80,6 +81,7 @@ export function Notice({ tone = 'info', children, className, ...props }) {
     info: 'bg-brand-soft text-brand-deep',
     error: 'bg-danger-soft text-danger',
     ok: 'bg-ok-soft text-ok',
+    warn: 'bg-warn-soft text-warn',
   };
   return (
     <div className={cx('rounded-xl px-4 py-3 text-sm font-medium', tones[tone], className)} {...props}>
@@ -103,6 +105,7 @@ export function Badge({ tone = 'neutral', children }) {
     brand: 'bg-brand-soft text-brand-dark',
     ok: 'bg-ok-soft text-ok',
     danger: 'bg-danger-soft text-danger',
+    warn: 'bg-warn-soft text-warn',
   };
   return <span className={cx('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold', tones[tone])}>{children}</span>;
 }
@@ -133,6 +136,16 @@ export function Segmented({ label, value, onChange, options }) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// Batang persentase (mis. isi toren). tone: ok | warn | danger.
+export function ProgressBar({ percent, tone = 'ok', label }) {
+  const colors = { ok: 'bg-brand', warn: 'bg-warn', danger: 'bg-danger' };
+  return (
+    <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="h-3 w-full overflow-hidden rounded-full bg-brand-soft">
+      <div className={cx('h-full rounded-full transition-[width]', colors[tone])} style={{ width: `${percent}%` }} />
     </div>
   );
 }
