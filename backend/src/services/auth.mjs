@@ -29,7 +29,7 @@ export async function verifyCredentials(username, password) {
 export function signSession(user) {
   return jwt.sign({ role: user.role }, env.JWT_SECRET, {
     subject: String(user.id),
-    expiresIn: `${env.SESSION_DAYS}d`,
+    expiresIn: Math.round(env.SESSION_HOURS * 3600),
   });
 }
 
@@ -62,7 +62,7 @@ export function cookieOptions() {
 export function setSessionCookie(res, token) {
   res.cookie(SESSION_COOKIE, token, {
     ...cookieOptions(),
-    maxAge: env.SESSION_DAYS * 24 * 60 * 60 * 1000,
+    maxAge: env.SESSION_HOURS * 60 * 60 * 1000,
   });
 }
 
