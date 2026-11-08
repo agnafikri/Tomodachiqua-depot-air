@@ -10,6 +10,13 @@ import { fieldErrorsFrom, useCustomers, useDebounced } from '../lib/hooks.mjs';
 
 const MAX_QTY = 1000;
 
+// Order mempengaruhi daftar order, utang, stok toren, dan ringkasan Beranda.
+function refreshAfterOrderChange(queryClient) {
+  for (const key of ['orders', 'debts', 'debt-customer', 'tank', 'tank-history', 'summary']) {
+    queryClient.invalidateQueries({ queryKey: [key] });
+  }
+}
+
 export default function OrderPage() {
   return (
     <>
@@ -71,7 +78,7 @@ function OrderForm() {
       setNote('');
       setFieldErrors({});
       setRequestId(newRequestId()); // order berikutnya = permintaan baru
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refreshAfterOrderChange(queryClient);
     },
     // requestId sengaja TIDAK diganti saat gagal: kirim ulang tidak akan membuat order ganda.
     onError: (err) => {
@@ -227,7 +234,7 @@ function TodayOrders() {
     onSuccess: () => {
       setConfirmId(null);
       setVoidError('');
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      refreshAfterOrderChange(queryClient);
     },
     onError: (err) => setVoidError(err.message),
   });
@@ -285,7 +292,7 @@ function TodayOrders() {
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-base font-extrabold text-ink">{formatRupiah(o.total)}</p>
-                <Badge tone={o.paymentStatus === 'PAID' ? 'ok' : 'danger'}>
+                <Badge tone={o.paymentStatus === 'PAID' ? 'ok' : o.paymentStatus === 'PARTIAL' ? 'warn' : 'danger'}>
                   {o.paymentStatus === 'PAID' ? 'Lunas' : o.paymentStatus === 'PARTIAL' ? 'Sebagian' : 'Utang'}
                 </Badge>
               </div>
