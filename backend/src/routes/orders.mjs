@@ -15,7 +15,8 @@ const orderInput = {
 
 const previewSchema = z.object(orderInput);
 
-const createSchema = z.object({
+const createSchema = z
+  .object({
   ...orderInput,
   payStatus: z.enum(['PAID', 'DEBT']),
   note: z
@@ -25,7 +26,13 @@ const createSchema = z.object({
     .transform((v) => (v === '' ? null : v))
     .nullish(),
   clientRequestId: z.uuid().optional(),
-});
+  })
+  // Pelanggan umum tidak punya nama di data, jadi pengutang harus tercatat lewat catatan.
+  .superRefine((data, ctx) => {
+    if (data.payStatus === 'DEBT' && data.customerId == null && !data.note) {
+      ctx.addIssue({ code: 'custom', path: ['note'], message: 'Isi catatan: siapa yang berutang.' });
+    }
+  });
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal YYYY-MM-DD.');
 const listSchema = z.object({
