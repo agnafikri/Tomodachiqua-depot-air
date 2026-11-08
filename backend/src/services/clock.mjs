@@ -21,3 +21,9 @@ export function jakartaDate(date = now()) {
     day: '2-digit',
   }).format(date);
 }
+
+// Waktu kejadian untuk catatan yang bertanggal (mis. air masuk tanggal X):
+// hari ini = sekarang; tanggal lampau = pukul 12.00 WIB pada tanggal itu.
+export function atDate(dateStr, date = now()) {
+  return dateStr === jakartaDate(date) ? date : new Date(`${dateStr}T12:00:00+07:00`);
+}
