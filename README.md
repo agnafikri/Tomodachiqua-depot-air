@@ -24,7 +24,7 @@ Butuh Node.js 22 atau lebih baru dan database PostgreSQL (Neon).
 cd backend
 npm install
 cp .env.example .env     # lalu isi DATABASE_URL, JWT_SECRET, dan akun SEED_*
-npm run migrate          # membuat tabel
+npm run migrate          # membuat/memperbarui tabel (aman diulang)
 npm run seed             # membuat akun ADMIN dan PEMILIK
 npm run dev              # http://localhost:4000
 npm test                 # menguji login dan pembatasan peran
@@ -36,6 +36,7 @@ npm test                 # menguji login dan pembatasan peran
 cd frontend
 npm install
 npm run dev              # http://localhost:5173
+npm test                 # menguji alur login/logout di React
 ```
 
 Saat dev, Vite meneruskan `/api` ke backend di port 4000, jadi `VITE_API_URL` dibiarkan kosong.
