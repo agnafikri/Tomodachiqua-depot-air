@@ -16,7 +16,7 @@ Gunakan versi stabil terbaru saat setup dan catat versinya di `package.json`.
 - Langkah setup (dipandu, konfirmasi tiap langkah): buat akun/project Neon → salin `DATABASE_URL` ke `backend/.env` → `npm run migrate` → `npm run seed`
 
 ## Variabel Lingkungan (`backend/.env`, jangan di-commit)
-`DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `NODE_ENV`, `TZ=Asia/Jakarta`, `SESSION_DAYS`, `PORT`; akun awal: `SEED_ADMIN_*` dan `SEED_PEMILIK_*` (lihat `backend/.env.example`)
+`DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN`, `NODE_ENV`, `TZ=Asia/Jakarta`, `SESSION_HOURS` (default 24), `PORT`; akun awal: `SEED_ADMIN_*` dan `SEED_PEMILIK_*` (lihat `backend/.env.example`)
 Frontend: `VITE_API_URL`
 
 ## Deploy

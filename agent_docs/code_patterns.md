@@ -11,6 +11,7 @@
 - Query SQL selalu berparameter (`$1, $2`), tidak pernah menyambung string
 - Error ditangani `middleware/errorHandler.mjs`; respons seragam `{ error: { code, message } }`
 - Otorisasi: `requireAuth.mjs` lalu `requireRole.mjs('ADMIN')` untuk impor Excel dan data master
+- Waktu "sekarang" dan "hari ini" hanya dari `services/clock.mjs` (`now()`, `jakartaDate()`); tes memajukan jam dengan `setClock()`. Jangan pakai `now()` SQL untuk data bisnis dan jangan pakai jam browser untuk menentukan tanggal.
 - Uang = integer rupiah; waktu = `timestamptz`; pengelompokan harian memakai `AT TIME ZONE 'Asia/Jakarta'`
 
 ## Rumus harga (referensi untuk `pricing.mjs`)
@@ -20,6 +21,8 @@
 
 ## Frontend
 - Mobile-first; navigasi bawah untuk PEMILIK (Order, Utang, Stok, Laporan); sidebar untuk ADMIN
+- Layout grid di HP wajib `grid-cols-1` (minmax(0,1fr)), bukan kolom `auto`: kolom auto bisa melebar mengikuti isi sehingga browser HP menciutkan tampilan
+- Setelah login selalu ke Beranda (`/`); jangan simpan rute terakhir
 - Data server lewat TanStack Query; state lokal seperlunya
 - Komponen dasar buatan sendiri (Button, Input, Card, Table); target sentuh minimal 44 px
 - Tampilkan state loading dan pesan "Menyiapkan server…" saat respons pertama lambat
