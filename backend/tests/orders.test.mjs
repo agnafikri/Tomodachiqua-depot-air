@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { env } from '../src/config/env.mjs';
 import { createApp } from '../src/app.mjs';
 import { pool } from '../src/db/pool.mjs';
+import { setClock } from '../src/services/clock.mjs';
 
 if (env.isProduction) throw new Error('Tes tidak boleh dijalankan di produksi.');
 
@@ -173,10 +174,22 @@ describe('menyimpan order', () => {
     assert.equal(r.json.order.customerName, 'ZZTEST Pengutang');
   });
 
-  it('utang untuk pelanggan umum ditolak', async () => {
-    const r = await api('/api/orders', { method: 'POST', cookie: pemilik, body: { customerId: null, qty: 2, isDelivered: false, payStatus: 'DEBT' } });
-    assert.equal(r.status, 400);
-    assert.equal(r.json.error.code, 'DEBT_NEEDS_CUSTOMER');
+  it('utang untuk pelanggan umum boleh, tetapi catatan (siapa yang berutang) wajib', async () => {
+    const tanpaCatatan = await api('/api/orders', { method: 'POST', cookie: pemilik, body: { customerId: null, qty: 2, isDelivered: false, payStatus: 'DEBT' } });
+    assert.equal(tanpaCatatan.status, 400);
+    assert.ok(tanpaCatatan.json.error.details.some((d) => d.field === 'note'));
+
+    const spasi = await api('/api/orders', { method: 'POST', cookie: pemilik, body: { customerId: null, qty: 2, isDelivered: false, payStatus: 'DEBT', note: '   ' } });
+    assert.equal(spasi.status, 400);
+
+    const ok = await api('/api/orders', { method: 'POST', cookie: pemilik, body: { customerId: null, qty: 2, isDelivered: false, payStatus: 'DEBT', note: 'Pak Dedi RT 3' } });
+    assert.equal(ok.status, 201);
+    assert.equal(ok.json.order.customerName, null);
+    assert.equal(ok.json.order.paymentStatus, 'DEBT');
+    assert.equal(ok.json.order.paidAmount, 0);
+    assert.equal(ok.json.order.note, 'Pak Dedi RT 3');
+    const pay = await pool.query('SELECT count(*)::int AS n FROM payments WHERE order_id = $1', [ok.json.order.id]);
+    assert.equal(pay.rows[0].n, 0);
   });
 
   it('harga lama tidak berubah ketika harga pelanggan diubah kemudian', async () => {
@@ -273,5 +286,42 @@ describe('daftar order dan pembatalan', () => {
   it('PATCH order hanya menerima {voided:true}; order tak ada = 404', async () => {
     assert.equal((await api('/api/orders/1', { method: 'PATCH', cookie: pemilik, body: { qty: 99 } })).status, 400);
     assert.equal((await api('/api/orders/999999999', { method: 'PATCH', cookie: pemilik, body: { voided: true } })).status, 404);
+  });
+});
+
+describe('jam sistem dan pergantian hari (zona Jakarta)', () => {
+  it('order mengikuti jam server: 23:59 WIB masuk tanggal itu, 00:01 WIB masuk tanggal berikutnya', async () => {
+    const c = await newCustomer('Ganti Hari');
+    try {
+      setClock(() => new Date('2026-11-07T23:59:00+07:00'));
+      const a = (await api('/api/orders', { method: 'POST', cookie: pemilik, body: { customerId: c.id, qty: 1, isDelivered: false, payStatus: 'PAID' } })).json.order;
+      const listA = await api(`/api/orders?customerId=${c.id}`, { cookie: pemilik });
+      assert.equal(listA.json.today, '2026-11-07');
+      assert.deepEqual(listA.json.orders.map((x) => x.id), [a.id]);
+
+      setClock(() => new Date('2026-11-08T00:01:00+07:00'));
+      const listKosong = await api(`/api/orders?customerId=${c.id}`, { cookie: pemilik });
+      assert.equal(listKosong.json.today, '2026-11-08');
+      assert.deepEqual(listKosong.json.range, { from: '2026-11-08', to: '2026-11-08' });
+      assert.equal(listKosong.json.orders.length, 0, 'hari baru dimulai kosong');
+
+      const b = (await api('/api/orders', { method: 'POST', cookie: pemilik, body: { customerId: c.id, qty: 2, isDelivered: false, payStatus: 'PAID' } })).json.order;
+      const day8 = await api(`/api/orders?customerId=${c.id}`, { cookie: pemilik });
+      assert.deepEqual(day8.json.orders.map((x) => x.id), [b.id]);
+      const day7 = await api(`/api/orders?customerId=${c.id}&from=2026-11-07`, { cookie: pemilik });
+      assert.deepEqual(day7.json.orders.map((x) => x.id), [a.id]);
+
+      // pembayaran lunas ikut bertanggal sama dengan order
+      const pay = await pool.query("SELECT to_char(paid_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD') AS d FROM payments WHERE order_id = $1", [b.id]);
+      assert.equal(pay.rows[0].d, '2026-11-08');
+
+      // order tanggal 7 sudah bukan "hari ini" lagi: PEMILIK tidak bisa membatalkan, ADMIN bisa
+      const denied = await api(`/api/orders/${a.id}`, { method: 'PATCH', cookie: pemilik, body: { voided: true } });
+      assert.equal(denied.status, 403);
+      assert.equal((await api(`/api/orders/${b.id}`, { method: 'PATCH', cookie: pemilik, body: { voided: true } })).status, 200);
+      assert.equal((await api(`/api/orders/${a.id}`, { method: 'PATCH', cookie: admin, body: { voided: true } })).status, 200);
+    } finally {
+      setClock();
+    }
   });
 });

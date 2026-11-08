@@ -60,6 +60,9 @@ describe('login', () => {
     assert.equal(r.json.user.role, 'ADMIN');
     assert.equal(r.json.user.password_hash, undefined);
     assert.match(r.setCookie, /HttpOnly/i);
+    assert.match(r.setCookie, /Max-Age=86400/); // sesi 1 hari
+    const jwtPayload = JSON.parse(Buffer.from(r.cookie.split('=')[1].split('.')[1], 'base64url').toString());
+    assert.equal(jwtPayload.exp - jwtPayload.iat, 86400);
   });
 
   it('gagal dengan password salah, username tak dikenal, dan akun nonaktif', async () => {
