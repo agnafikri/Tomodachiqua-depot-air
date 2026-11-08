@@ -1,5 +1,6 @@
 import { pool, query } from '../db/pool.mjs';
 import { AppError } from '../errors.mjs';
+import { jakartaDate, now } from './clock.mjs';
 import { getCustomer } from './customers.mjs';
 import { calculateOrder } from './pricing.mjs';
 import { getPrices } from './settings.mjs';
@@ -64,21 +65,18 @@ export async function getOrder(id, db = { query }) {
 }
 
 export async function createOrder({ customerId, qty, isDelivered, payStatus, note, clientRequestId }, user) {
-  if (payStatus === 'DEBT' && customerId == null) {
-    throw new AppError(400, 'DEBT_NEEDS_CUSTOMER', 'Order utang harus untuk pelanggan bernama, bukan pelanggan umum.');
-  }
-
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const price = await priceFor({ customerId, qty, isDelivered }, client);
+    const at = now();
 
     const inserted = await client.query(
-      `INSERT INTO orders (customer_id, qty, is_delivered, unit_price, paid_qty, total, note, created_by, client_request_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO orders (customer_id, qty, is_delivered, unit_price, paid_qty, total, note, created_by, client_request_id, ordered_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (client_request_id) DO NOTHING
        RETURNING id`,
-      [customerId, qty, isDelivered, price.unitPrice, price.paidQty, price.total, note ?? null, user.id, clientRequestId ?? null],
+      [customerId, qty, isDelivered, price.unitPrice, price.paidQty, price.total, note ?? null, user.id, clientRequestId ?? null, at],
     );
 
     // Permintaan yang sama terkirim dua kali: kembalikan order yang sudah ada, jangan buat baru.
@@ -91,8 +89,8 @@ export async function createOrder({ customerId, qty, isDelivered, payStatus, not
     const orderId = inserted.rows[0].id;
     if (payStatus === 'PAID') {
       await client.query(
-        'INSERT INTO payments (customer_id, order_id, amount, created_by) VALUES ($1, $2, $3, $4)',
-        [customerId, orderId, price.total, user.id],
+        'INSERT INTO payments (customer_id, order_id, amount, created_by, paid_at) VALUES ($1, $2, $3, $4, $5)',
+        [customerId, orderId, price.total, user.id, at],
       );
     }
     await client.query('COMMIT');
@@ -105,20 +103,18 @@ export async function createOrder({ customerId, qty, isDelivered, payStatus, not
   }
 }
 
-// from/to = tanggal 'YYYY-MM-DD' (zona Asia/Jakarta), keduanya inklusif. Default: hari ini.
+// from/to = tanggal 'YYYY-MM-DD' (zona Asia/Jakarta), keduanya inklusif. Default: hari ini menurut jam server.
 export async function listOrders({ from, to, customerId }) {
-  const params = [];
-  const where = ['o.voided_at IS NULL'];
-  const day = (value) => {
-    params.push(value);
-    return `$${params.length}::date`;
-  };
+  const today = jakartaDate();
+  const rangeFrom = from ?? to ?? today;
+  const rangeTo = to ?? from ?? today;
 
-  const fromExpr = from ? day(from) : `(now() AT TIME ZONE '${TZ}')::date`;
-  const toExpr = to ? day(to) : from ? fromExpr : `(now() AT TIME ZONE '${TZ}')::date`;
-  where.push(`o.ordered_at >= (${fromExpr})::timestamp AT TIME ZONE '${TZ}'`);
-  where.push(`o.ordered_at <  ((${toExpr}) + 1)::timestamp AT TIME ZONE '${TZ}'`);
-
+  const params = [rangeFrom, rangeTo];
+  const where = [
+    'o.voided_at IS NULL',
+    `o.ordered_at >= ($1::date)::timestamp AT TIME ZONE '${TZ}'`,
+    `o.ordered_at <  ($2::date + 1)::timestamp AT TIME ZONE '${TZ}'`,
+  ];
   if (customerId != null) {
     params.push(customerId);
     where.push(`o.customer_id = $${params.length}`);
@@ -135,7 +131,7 @@ export async function listOrders({ from, to, customerId }) {
     }),
     { orderCount: 0, gallons: 0, total: 0, unpaid: 0 },
   );
-  return { orders, summary };
+  return { orders, summary, today, range: { from: rangeFrom, to: rangeTo } };
 }
 
 // Membatalkan order (tidak menghapus). PEMILIK hanya boleh membatalkan order hari ini;
@@ -145,19 +141,19 @@ export async function voidOrder(id, user) {
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      `SELECT id, voided_at,
-              (ordered_at AT TIME ZONE '${TZ}')::date = (now() AT TIME ZONE '${TZ}')::date AS is_today
+      `SELECT id, voided_at, to_char(ordered_at AT TIME ZONE '${TZ}', 'YYYY-MM-DD') AS order_date
        FROM orders WHERE id = $1 FOR UPDATE`,
       [id],
     );
     const order = rows[0];
     if (!order) throw new AppError(404, 'ORDER_NOT_FOUND', 'Order tidak ditemukan.');
     if (order.voided_at) throw new AppError(409, 'ALREADY_VOIDED', 'Order ini sudah dibatalkan.');
-    if (user.role !== 'ADMIN' && !order.is_today) {
+    if (user.role !== 'ADMIN' && order.order_date !== jakartaDate()) {
       throw new AppError(403, 'VOID_NOT_ALLOWED', 'Order hari sebelumnya hanya bisa dibatalkan oleh admin.');
     }
-    await client.query('UPDATE orders SET voided_at = now(), voided_by = $2 WHERE id = $1', [id, user.id]);
-    await client.query('UPDATE payments SET voided_at = now() WHERE order_id = $1 AND voided_at IS NULL', [id]);
+    const at = now();
+    await client.query('UPDATE orders SET voided_at = $3, voided_by = $2 WHERE id = $1', [id, user.id, at]);
+    await client.query('UPDATE payments SET voided_at = $2 WHERE order_id = $1 AND voided_at IS NULL', [id, at]);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
