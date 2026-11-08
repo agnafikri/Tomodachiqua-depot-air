@@ -9,7 +9,12 @@ import { requireCsrfHeader } from './middleware/requireCsrfHeader.mjs';
 import adminRouter from './routes/admin.mjs';
 import { authRouter } from './routes/auth.mjs';
 import customersRouter from './routes/customers.mjs';
+import debtsRouter from './routes/debts.mjs';
 import ordersRouter from './routes/orders.mjs';
+import paymentsRouter from './routes/payments.mjs';
+import personalUseRouter from './routes/personalUse.mjs';
+import summaryRouter from './routes/summary.mjs';
+import tankRouter from './routes/tank.mjs';
 
 export function createApp({ loginMax = 10 } = {}) {
   const app = express();
@@ -44,6 +49,11 @@ export function createApp({ loginMax = 10 } = {}) {
   app.use('/api/auth', authRouter({ loginMax }));
   app.use('/api/customers', customersRouter);
   app.use('/api/orders', ordersRouter);
+  app.use('/api/summary', summaryRouter);
+  app.use('/api/debts', debtsRouter);
+  app.use('/api/payments', paymentsRouter);
+  app.use('/api/tank', tankRouter);
+  app.use('/api/personal-use', personalUseRouter);
   app.use('/api/admin', adminRouter);
 
   app.use(notFound);
