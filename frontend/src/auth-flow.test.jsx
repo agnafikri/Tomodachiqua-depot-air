@@ -128,7 +128,7 @@ describe('alur login dan logout', () => {
   it('login ulang sebagai akun yang sama pun mendarat di Beranda, bukan halaman terakhir', async () => {
     session = USERS.abah;
     renderApp('/stok');
-    await screen.findByRole('heading', { name: 'Stok' });
+    await screen.findByRole('heading', { name: 'Stok toren' });
     fireEvent.click(screen.getAllByRole('button', { name: 'Keluar' })[0]);
     await screen.findByRole('heading', { name: 'Masuk' });
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'abah' } });
