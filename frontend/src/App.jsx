@@ -2,9 +2,11 @@ import { Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import { RequireAuth, RequireRole } from './components/guards.jsx';
 import ComingSoonPage from './pages/ComingSoonPage.jsx';
+import CustomersPage from './pages/CustomersPage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
+import OrderPage from './pages/OrderPage.jsx';
 
 export default function App() {
   return (
@@ -15,9 +17,9 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
 
-          {/* Dibuat di fase berikutnya; dibuka untuk ADMIN dan PEMILIK */}
-          <Route path="order" element={<ComingSoonPage />} />
-          <Route path="pelanggan" element={<ComingSoonPage />} />
+          {/* Dibuka untuk ADMIN dan PEMILIK; yang belum jadi = penampung (ComingSoon) */}
+          <Route path="order" element={<OrderPage />} />
+          <Route path="pelanggan" element={<CustomersPage />} />
           <Route path="utang" element={<ComingSoonPage />} />
           <Route path="stok" element={<ComingSoonPage />} />
           <Route path="laporan" element={<ComingSoonPage />} />
