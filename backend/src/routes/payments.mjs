@@ -12,9 +12,15 @@ const paymentSchema = z
     customerId: z.number().int().positive().optional(),
     orderId: z.number().int().positive().optional(),
     amount: z.number().int('Jumlah harus bilangan bulat rupiah.').min(1, 'Jumlah minimal Rp 1.').max(1_000_000_000, 'Jumlah terlalu besar.'),
+    // Keringanan: sisa utang setelah pembayaran ini dianggap lunas; wajib disertai catatan alasan.
+    waiveRemaining: z.boolean().optional(),
+    note: z.string().trim().max(200).transform((v) => (v === '' ? null : v)).nullish(),
     clientRequestId: z.uuid().optional(),
   })
   .superRefine((d, ctx) => {
+    if (d.waiveRemaining && !d.note) {
+      ctx.addIssue({ code: 'custom', path: ['note'], message: 'Isi catatan alasan keringanan.' });
+    }
     if ((d.customerId == null) === (d.orderId == null)) {
       ctx.addIssue({ code: 'custom', path: ['customerId'], message: 'Pilih pelanggan atau order, salah satu.' });
     }
