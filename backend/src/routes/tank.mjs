@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/requireAuth.mjs';
 import { jakartaDate } from '../services/clock.mjs';
+import { isCalendarDate } from '../services/dates.mjs';
 import { getTankStatus } from '../services/stock.mjs';
 import { addAdjustment, addRefill, listHistory, voidRefill } from '../services/tank.mjs';
 
@@ -19,8 +20,8 @@ const note = z
 const pastOrToday = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal YYYY-MM-DD.')
-  .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), 'Tanggal tidak valid.')
-  .refine((d) => d <= jakartaDate(), 'Tanggal tidak boleh di masa depan.');
+  .refine(isCalendarDate, 'Tanggal tidak valid.')
+  .refine((d) => !isCalendarDate(d) || d <= jakartaDate(), 'Tanggal tidak boleh di masa depan.');
 
 const id = z.coerce.number().int().positive();
 const voidBody = z.object({ voided: z.literal(true) });

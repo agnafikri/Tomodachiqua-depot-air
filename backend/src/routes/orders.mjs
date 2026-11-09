@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/requireAuth.mjs';
+import { isCalendarDate } from '../services/dates.mjs';
 import { createOrder, listOrders, priceFor, voidOrder } from '../services/orders.mjs';
 import { MAX_QTY } from '../services/pricing.mjs';
 
@@ -34,7 +35,10 @@ const createSchema = z
     }
   });
 
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal YYYY-MM-DD.');
+const date = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal YYYY-MM-DD.')
+  .refine(isCalendarDate, 'Tanggal tidak valid.'); // mis. 30 Februari ditolak (bukan galat server)
 const listSchema = z.object({
   from: date.optional(),
   to: date.optional(),
