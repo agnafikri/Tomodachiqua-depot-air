@@ -17,8 +17,8 @@ export const NAV_ITEMS = [
   { to: '/pelanggan', label: 'Pelanggan', icon: Users, roles: ['ADMIN', 'PEMILIK'], desc: 'Data pelanggan, harga khusus, dan diskon' },
   { to: '/utang', label: 'Utang', icon: Wallet, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Siapa yang masih berutang dan pembayarannya' },
   { to: '/stok', label: 'Stok', icon: Gauge, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Air di toren dan perkiraan kapan habis' },
-  { to: '/laporan', label: 'Laporan', icon: FileText, roles: ['ADMIN', 'PEMILIK'], mobile: true, phase: 4, desc: 'Ringkasan harian, mingguan, dan bulanan' },
-  { to: '/keuangan', label: 'Keuangan', icon: PiggyBank, roles: ['ADMIN', 'PEMILIK'], phase: 4, desc: 'Pemasukan, pengeluaran, dan saldo' },
+  { to: '/laporan', label: 'Laporan', icon: FileText, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Ringkasan harian, mingguan, dan bulanan' },
+  { to: '/keuangan', label: 'Keuangan', icon: PiggyBank, roles: ['ADMIN', 'PEMILIK'], desc: 'Pemasukan, pengeluaran, dan saldo' },
   { to: '/admin/impor-ekspor', label: 'Impor dan ekspor', icon: FileSpreadsheet, roles: ['ADMIN'], phase: 5, desc: 'Ekspor laporan dan impor data dari Excel' },
 ];
 

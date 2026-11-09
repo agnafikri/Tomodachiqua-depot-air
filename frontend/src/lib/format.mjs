@@ -54,3 +54,13 @@ export function daysLeftText(days) {
   if (days < 1) return 'kurang dari 1 hari';
   return `${formatDecimal(days)} hari`;
 }
+
+export const shortDay = (value) => formatDate(`${value}T00:00:00Z`, { weekday: 'short', day: 'numeric', month: 'short' });
+
+// Label rentang periode dari tanggal 'YYYY-MM-DD' (dihitung server).
+export function periodLabel(period, from, to) {
+  const d = (v, o) => formatDate(`${v}T00:00:00Z`, o);
+  if (period === 'daily') return d(from, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  if (period === 'weekly') return `${d(from, { day: 'numeric', month: 'short' })} – ${d(to, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  return d(from, { month: 'long', year: 'numeric' });
+}
