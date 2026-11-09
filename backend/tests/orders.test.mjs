@@ -31,6 +31,7 @@ async function login(username) {
 }
 
 async function cleanup() {
+  await pool.query("DELETE FROM expenses WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
   await pool.query("DELETE FROM debt_waivers WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
   await pool.query("DELETE FROM payments WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
   await pool.query("DELETE FROM orders WHERE created_by IN (SELECT id FROM users WHERE username LIKE 'ord\\_%')");
@@ -246,6 +247,8 @@ describe('daftar order dan pembatalan', () => {
 
     assert.equal((await api('/api/orders?from=2026-02-01&to=2026-01-01', { cookie: pemilik })).status, 400);
     assert.equal((await api('/api/orders?from=besok', { cookie: pemilik })).status, 400);
+    assert.equal((await api('/api/orders?from=2031-02-30', { cookie: pemilik })).status, 400, 'tanggal yang tidak ada di kalender');
+    assert.equal((await api('/api/orders?from=2031-13-01', { cookie: pemilik })).status, 400);
   });
 
   it('order pagi dan malam hari Jakarta masuk ke tanggal Jakarta yang benar', async () => {

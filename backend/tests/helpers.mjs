@@ -11,6 +11,7 @@ export const PASS = 'sandi-uji-123';
 
 export async function cleanup(prefix) {
   const users = `(SELECT id FROM users WHERE username LIKE '${prefix}\\_%')`;
+  await pool.query(`DELETE FROM expenses WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM debt_waivers WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM payments WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM personal_use WHERE created_by IN ${users}`);
