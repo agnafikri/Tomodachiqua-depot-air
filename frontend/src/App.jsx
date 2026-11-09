@@ -4,10 +4,12 @@ import { RequireAuth, RequireRole } from './components/guards.jsx';
 import ComingSoonPage from './pages/ComingSoonPage.jsx';
 import CustomersPage from './pages/CustomersPage.jsx';
 import DebtsPage from './pages/DebtsPage.jsx';
+import FinancePage from './pages/FinancePage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderPage from './pages/OrderPage.jsx';
+import ReportPage from './pages/ReportPage.jsx';
 import TankPage from './pages/TankPage.jsx';
 
 export default function App() {
@@ -24,8 +26,8 @@ export default function App() {
           <Route path="pelanggan" element={<CustomersPage />} />
           <Route path="utang" element={<DebtsPage />} />
           <Route path="stok" element={<TankPage />} />
-          <Route path="laporan" element={<ComingSoonPage />} />
-          <Route path="keuangan" element={<ComingSoonPage />} />
+          <Route path="laporan" element={<ReportPage />} />
+          <Route path="keuangan" element={<FinancePage />} />
 
           {/* Khusus ADMIN */}
           <Route element={<RequireRole roles={['ADMIN']} />}>
