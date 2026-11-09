@@ -69,6 +69,39 @@ export const Input = forwardRef(function Input({ label, error, hint, className, 
   );
 });
 
+// Pilihan dari daftar (native <select>: nyaman di HP). options = [{ value, label }].
+export const Select = forwardRef(function Select({ label, error, options, placeholder, className, id, ...props }, ref) {
+  const autoId = useId();
+  const selectId = id || autoId;
+  return (
+    <div className={className}>
+      <label htmlFor={selectId} className="mb-1.5 block text-sm font-semibold text-ink">
+        {label}
+      </label>
+      <select
+        ref={ref}
+        id={selectId}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={error ? `${selectId}-error` : undefined}
+        className={cx('block min-h-12 w-full rounded-xl border bg-white px-4 text-base text-ink', error ? 'border-danger' : 'border-line')}
+        {...props}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {error && (
+        <p id={`${selectId}-error`} className="mt-1.5 text-sm font-medium text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+});
+
 export function Card({ className, children, ...props }) {
   return (
     // Padding bawaan p-5 dilewati bila pemakai memberi padding sendiri (mis. p-0 untuk daftar tepi ke tepi).
@@ -113,11 +146,11 @@ export function Badge({ tone = 'neutral', children }) {
 }
 
 // Pilihan satu dari beberapa (mis. Diantar / Diambil). Tombol besar untuk jempol.
-export function Segmented({ label, value, onChange, options }) {
+export function Segmented({ label, value, onChange, options, hideLabel = false }) {
   const labelId = useId();
   return (
     <div>
-      <p className="mb-1.5 text-sm font-semibold text-ink" id={labelId}>
+      <p className={cx('text-sm font-semibold text-ink', hideLabel ? 'sr-only' : 'mb-1.5')} id={labelId}>
         {label}
       </p>
       <div role="radiogroup" aria-labelledby={labelId} className="grid gap-1.5 rounded-2xl bg-canvas p-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
