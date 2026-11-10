@@ -10,7 +10,9 @@ import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderPage from './pages/OrderPage.jsx';
 import ReportPage from './pages/ReportPage.jsx';
+import SlipPage from './pages/SlipPage.jsx';
 import TankPage from './pages/TankPage.jsx';
+import WagesPage from './pages/WagesPage.jsx';
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="stok" element={<TankPage />} />
           <Route path="laporan" element={<ReportPage />} />
           <Route path="keuangan" element={<FinancePage />} />
+          <Route path="upah" element={<WagesPage />} />
+          <Route path="upah/slip/:id" element={<SlipPage />} />
 
           {/* Khusus ADMIN */}
           <Route element={<RequireRole roles={['ADMIN']} />}>
