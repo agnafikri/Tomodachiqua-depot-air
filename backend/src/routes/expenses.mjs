@@ -18,7 +18,12 @@ const expenseSchema = z.object({
     .refine(isCalendarDate, 'Tanggal tidak valid.')
     .refine((d) => !isCalendarDate(d) || d <= jakartaDate(), 'Tanggal tidak boleh di masa depan.')
     .optional(),
-  category: z.enum(EXPENSE_CODES, { error: 'Pilih kategori pengeluaran.' }),
+  category: z
+    .string({ error: 'Pilih kategori pengeluaran.' })
+    .superRefine((c, ctx) => {
+      if (c === 'UPAH') ctx.addIssue({ code: 'custom', message: 'Upah dicatat lewat menu Upah, bukan di pengeluaran.' });
+      else if (!EXPENSE_CODES.includes(c)) ctx.addIssue({ code: 'custom', message: 'Pilih kategori pengeluaran.' });
+    }),
   amount: z.number().int('Jumlah harus bilangan bulat rupiah.').min(1, 'Jumlah minimal Rp 1.').max(1_000_000_000, 'Jumlah terlalu besar.'),
   note: z.string().trim().max(200).transform((v) => (v === '' ? null : v)).nullish(),
   clientRequestId: z.uuid().optional(),
