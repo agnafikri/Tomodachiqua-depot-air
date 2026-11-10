@@ -4,6 +4,7 @@ import {
   FileText,
   Gauge,
   House,
+  Banknote,
   PiggyBank,
   Users,
   Wallet,
@@ -19,6 +20,7 @@ export const NAV_ITEMS = [
   { to: '/stok', label: 'Stok', icon: Gauge, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Air di toren dan perkiraan kapan habis' },
   { to: '/laporan', label: 'Laporan', icon: FileText, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Ringkasan harian, mingguan, dan bulanan' },
   { to: '/keuangan', label: 'Keuangan', icon: PiggyBank, roles: ['ADMIN', 'PEMILIK'], desc: 'Pemasukan, pengeluaran, dan saldo' },
+  { to: '/upah', label: 'Upah', icon: Banknote, roles: ['ADMIN', 'PEMILIK'], desc: 'Upah harian karyawan dan slip' },
   { to: '/admin/impor-ekspor', label: 'Impor dan ekspor', icon: FileSpreadsheet, roles: ['ADMIN'], phase: 5, desc: 'Ekspor laporan dan impor data dari Excel' },
 ];
 
