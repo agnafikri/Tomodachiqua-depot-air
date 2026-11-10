@@ -102,6 +102,7 @@ describe('laporan dan keuangan satu bulan (Juni 2031)', () => {
       newDebt: 54000, // 18.000 + 30.000 + 6.000
       waived: 1000,
       personalGallons: 3,
+      wages: 0,
       expenses: 70000,
       balance: 18000,
     });
