@@ -46,3 +46,12 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  body {
+    background: #fff;
+  }
+  @page {
+    margin: 14mm;
+  }
+}
