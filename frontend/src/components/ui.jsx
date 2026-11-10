@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { LoaderCircle, X } from 'lucide-react';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -28,6 +29,19 @@ export function Button({ variant = 'primary', loading = false, className, childr
       {loading && <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />}
       {children}
     </button>
+  );
+}
+
+// Tautan yang tampil sebagai tombol (untuk berpindah halaman).
+export function LinkButton({ to, className, children, variant = 'secondary', ...props }) {
+  const styles = {
+    primary: 'bg-brand text-white hover:bg-brand-dark',
+    secondary: 'border border-brand-line bg-white text-brand hover:bg-brand-soft',
+  };
+  return (
+    <Link to={to} className={cx('inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-bold', styles[variant], className)} {...props}>
+      {children}
+    </Link>
   );
 }
 

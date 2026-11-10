@@ -19,7 +19,7 @@ export default function AppShell() {
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[17rem_1fr]">
       {/* Sidebar komputer */}
-      <aside className="hidden border-r border-line bg-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
+      <aside className="hidden border-r border-line bg-white print:hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
         <div className="flex items-center gap-3 px-6 py-6">
           <DropMark className="size-10" />
           <div>
@@ -59,7 +59,7 @@ export default function AppShell() {
 
       <div className="min-w-0">
         {/* Bar atas HP */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-white px-4 pt-[env(safe-area-inset-top)] lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-white px-4 pt-[env(safe-area-inset-top)] print:hidden lg:hidden">
           <div className="flex min-h-14 items-center gap-2.5">
             <DropMark className="size-8" />
             <span className="text-lg font-extrabold text-brand-deep">Tomodachiqua</span>
@@ -73,7 +73,7 @@ export default function AppShell() {
           </button>
         </header>
 
-        <main className="mx-auto w-full max-w-3xl px-4 pt-5 pb-28 lg:max-w-5xl lg:px-10 lg:pt-10 lg:pb-12">
+        <main className="mx-auto w-full max-w-3xl px-4 pt-5 pb-28 print:max-w-none print:p-0 lg:max-w-5xl lg:px-10 lg:pt-10 lg:pb-12">
           <Outlet />
         </main>
       </div>
@@ -81,7 +81,7 @@ export default function AppShell() {
       {/* Navigasi bawah HP */}
       <nav
         aria-label="Menu utama"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] print:hidden lg:hidden"
       >
         <ul className="grid" style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}>
           {mobileItems.map(({ to, label, icon: Icon }) => (
