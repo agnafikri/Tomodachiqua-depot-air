@@ -1,4 +1,5 @@
 // Kategori pengeluaran. Kode disimpan di database; label ditampilkan di layar.
+// UPAH ('Gaji dan upah') diisi otomatis dari slip upah harian dan TIDAK bisa dicatat manual.
 export const EXPENSE_CATEGORIES = [
   { code: 'LISTRIK', label: 'Listrik' },
   { code: 'AIR', label: 'Air (PDAM)' },
@@ -9,6 +10,8 @@ export const EXPENSE_CATEGORIES = [
   { code: 'LAIN', label: 'Lain-lain' },
 ];
 
-export const EXPENSE_CODES = EXPENSE_CATEGORIES.map((c) => c.code);
+// Kategori yang boleh dipilih saat mencatat pengeluaran manual.
+export const MANUAL_CATEGORIES = EXPENSE_CATEGORIES.filter((c) => c.code !== 'UPAH');
+export const EXPENSE_CODES = MANUAL_CATEGORIES.map((c) => c.code);
 
 export const categoryLabel = (code) => EXPENSE_CATEGORIES.find((c) => c.code === code)?.label ?? code;
