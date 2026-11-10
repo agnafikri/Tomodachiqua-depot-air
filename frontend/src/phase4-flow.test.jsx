@@ -68,6 +68,7 @@ beforeEach(() => {
             { category: 'LISTRIK', label: 'Listrik', amount: 50000, count: 1, percent: 71 },
             { category: 'GALON', label: 'Galon dan segel', amount: 20000, count: 1, percent: 29 },
           ] },
+          wages: { total: 50000, byEmployee: [{ employeeId: 1, name: 'Budi', amount: 30000, days: 2 }, { employeeId: 2, name: 'Sari', amount: 20000, days: 1 }] },
           balance: 18000,
           categories: [{ code: 'LISTRIK', label: 'Listrik' }, { code: 'GALON', label: 'Galon dan segel' }, { code: 'LAIN', label: 'Lain-lain' }],
         });
@@ -160,6 +161,14 @@ describe('layar Keuangan', () => {
     expect(screen.getByText(/Keringanan utang Rp 1\.000 tidak dihitung sebagai pemasukan/)).toBeTruthy();
     expect(screen.getByText('71% · 1 catatan')).toBeTruthy();
     expect(await screen.findByText('Daftar pengeluaran')).toBeTruthy();
+  });
+
+  it('rekap upah harian per karyawan tampil dengan jumlah hari', async () => {
+    renderApp('/keuangan');
+    expect(await screen.findByText('Upah harian per karyawan')).toBeTruthy();
+    expect(screen.getByText('Budi')).toBeTruthy();
+    expect(screen.getByText('2 hari')).toBeTruthy();
+    expect(screen.getByText('Rp 30.000')).toBeTruthy();
   });
 
   it('daftar pengeluaran: tombol batalkan hanya pada yang boleh, dengan konfirmasi', async () => {
