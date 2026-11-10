@@ -80,6 +80,7 @@ export default function ReportPage() {
             <dl className="divide-y divide-line">
               <Row label="Uang masuk" value={formatRupiah(t.cashIn)} />
               <Row label="Pengeluaran" value={formatRupiah(t.expenses)} />
+              {t.wages > 0 && <Row label="Termasuk upah harian" value={formatRupiah(t.wages)} />}
               <Row label="Saldo" value={formatRupiah(t.balance)} strong tone={t.balance < 0 ? 'text-danger' : 'text-ok'} />
             </dl>
             <Link to="/keuangan" className="mt-2 inline-block min-h-11 py-2 text-sm font-bold text-brand underline underline-offset-4">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import PeriodBar from '../components/PeriodBar.jsx';
 import { Button, Card, Input, Notice, PageHeader, Select, Sheet } from '../components/ui.jsx';
 import { api } from '../lib/api.mjs';
@@ -72,6 +73,27 @@ export default function FinancePage() {
               </ul>
             )}
           </Card>
+
+          {f.wages.total > 0 && (
+            <Card>
+              <h2 className="mb-1 text-lg font-extrabold text-ink">Upah harian per karyawan</h2>
+              <ul className="divide-y divide-line">
+                {f.wages.byEmployee.map((w) => (
+                  <li key={w.employeeId} className="flex items-baseline justify-between gap-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate text-base font-semibold text-ink">{w.name}</span>
+                      <span className="block text-sm text-muted">{w.days} hari</span>
+                    </span>
+                    <span className="text-base font-extrabold text-ink">{formatRupiah(w.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-sm text-muted">Jumlah dari slip upah harian pada periode ini; sudah termasuk di pengeluaran.</p>
+              <Link to="/upah" className="mt-1 inline-block min-h-11 py-2 text-sm font-bold text-brand underline underline-offset-4">
+                Buka Upah
+              </Link>
+            </Card>
+          )}
 
           <ExpenseList suffix={suffix} />
         </div>
@@ -197,6 +219,7 @@ function ExpenseSheet({ finance, onClose, onSaved }) {
             {error}
           </Notice>
         )}
+        <p className="text-sm text-muted">Upah karyawan dicatat lewat menu Upah, bukan di sini.</p>
         <Select
           label="Kategori"
           value={category}
