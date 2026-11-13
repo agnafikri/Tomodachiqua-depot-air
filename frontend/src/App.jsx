@@ -1,11 +1,11 @@
 import { Route, Routes } from 'react-router-dom';
 import AppShell from './components/AppShell.jsx';
 import { RequireAuth, RequireRole } from './components/guards.jsx';
-import ComingSoonPage from './pages/ComingSoonPage.jsx';
 import CustomersPage from './pages/CustomersPage.jsx';
 import DebtsPage from './pages/DebtsPage.jsx';
 import FinancePage from './pages/FinancePage.jsx';
 import HomePage from './pages/HomePage.jsx';
+import ImportExportPage from './pages/ImportExportPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderPage from './pages/OrderPage.jsx';
@@ -23,7 +23,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
 
-          {/* Dibuka untuk ADMIN dan PEMILIK; yang belum jadi = penampung (ComingSoon) */}
+          {/* Dibuka untuk ADMIN dan PEMILIK */}
           <Route path="order" element={<OrderPage />} />
           <Route path="pelanggan" element={<CustomersPage />} />
           <Route path="utang" element={<DebtsPage />} />
@@ -35,7 +35,7 @@ export default function App() {
 
           {/* Khusus ADMIN */}
           <Route element={<RequireRole roles={['ADMIN']} />}>
-            <Route path="admin/impor-ekspor" element={<ComingSoonPage />} />
+            <Route path="admin/impor-ekspor" element={<ImportExportPage />} />
           </Route>
 
           <Route path="*" element={<NotFoundPage />} />
