@@ -1,7 +1,8 @@
 // Pembungkus fetch ke backend: cookie sesi, header pengaman, dan deteksi server yang sedang bangun.
 import { useSyncExternalStore } from 'react';
 
-const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+export const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const BASE = API_BASE;
 const TIMEOUT_MS = 90_000; // batas tunggu; server hosting bisa lambat saat pertama diakses
 const SLOW_AFTER_MS = 3_000;
 
@@ -43,6 +44,7 @@ export function setUnauthorizedHandler(fn) {
 }
 
 async function request(method, path, body) {
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   pending += 1;
   if (!slowTimer) slowTimer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
 
@@ -58,9 +60,10 @@ async function request(method, path, body) {
         signal: controller.signal,
         headers: {
           'X-Requested-With': 'tomodachiqua',
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          // FormData (unggah berkas): biarkan browser mengisi Content-Type beserta batasnya.
+          ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
         },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
+        body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       });
     } catch {
       throw new ApiError(0, 'NETWORK', 'Tidak bisa terhubung ke server. Periksa koneksi internet lalu coba lagi.');
@@ -88,5 +91,6 @@ export const api = {
   get: (path) => request('GET', path),
   post: (path, body = {}) => request('POST', path, body),
   patch: (path, body = {}) => request('PATCH', path, body),
+  upload: (path, formData) => request('POST', path, formData),
   delete: (path) => request('DELETE', path),
 };
