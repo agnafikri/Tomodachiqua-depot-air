@@ -11,7 +11,9 @@ import { authRouter } from './routes/auth.mjs';
 import customersRouter from './routes/customers.mjs';
 import debtsRouter from './routes/debts.mjs';
 import employeesRouter from './routes/employees.mjs';
+import exportRouter from './routes/export.mjs';
 import expensesRouter from './routes/expenses.mjs';
+import importRouter from './routes/import.mjs';
 import ordersRouter from './routes/orders.mjs';
 import paymentsRouter from './routes/payments.mjs';
 import personalUseRouter from './routes/personalUse.mjs';
@@ -37,6 +39,7 @@ export function createApp({ loginMax = 10 } = {}) {
         return cb(null, false);
       },
       credentials: true,
+      exposedHeaders: ['Content-Disposition'], // agar frontend lintas domain bisa membaca nama berkas unduhan
     }),
   );
   app.use(express.json({ limit: '100kb' }));
@@ -60,6 +63,8 @@ export function createApp({ loginMax = 10 } = {}) {
   app.use('/api/tank', tankRouter);
   app.use('/api/personal-use', personalUseRouter);
   app.use('/api/expenses', expensesRouter);
+  app.use('/api/export', exportRouter);
+  app.use('/api/import', importRouter);
   app.use('/api/employees', employeesRouter);
   app.use('/api/wages', wagesRouter);
   app.use('/api/reports', reportsRouter);
