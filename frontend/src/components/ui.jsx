@@ -177,7 +177,8 @@ export function Segmented({ label, value, onChange, options, hideLabel = false }
             disabled={o.disabled}
             onClick={() => onChange(o.value)}
             className={cx(
-              'min-h-12 rounded-xl px-3 text-base font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+              'min-h-12 rounded-xl font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+              options.length >= 3 ? 'px-1.5 text-sm sm:px-3 sm:text-base' : 'px-3 text-base', // tiga pilihan: lebih ringkas agar muat di HP kecil
               value === o.value ? 'bg-brand text-white' : 'text-muted hover:bg-white',
             )}
           >
