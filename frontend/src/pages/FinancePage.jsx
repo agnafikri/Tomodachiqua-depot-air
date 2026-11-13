@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import DownloadButton from '../components/DownloadButton.jsx';
 import PeriodBar from '../components/PeriodBar.jsx';
 import { Button, Card, Input, Notice, PageHeader, Select, Sheet } from '../components/ui.jsx';
 import { api } from '../lib/api.mjs';
@@ -44,6 +45,8 @@ export default function FinancePage() {
             Pemasukan = uang yang benar-benar diterima: dibayar saat order {formatRupiah(f.income.atOrder)} + pembayaran utang {formatRupiah(f.income.debtPayments)}.
             {f.waived > 0 && ` Keringanan utang ${formatRupiah(f.waived)} tidak dihitung sebagai pemasukan.`}
           </p>
+
+          <DownloadButton path={`/api/export/report.xlsx?period=${f.period}&date=${f.range.from}`}>Unduh Excel</DownloadButton>
 
           <Button onClick={() => setAdding(true)} className="w-full">
             <Plus className="size-5" aria-hidden="true" />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import DownloadButton from '../components/DownloadButton.jsx';
 import PeriodBar from '../components/PeriodBar.jsx';
 import { Card, Notice, PageHeader } from '../components/ui.jsx';
 import { api } from '../lib/api.mjs';
@@ -31,6 +32,11 @@ export default function ReportPage() {
       <PageHeader title="Laporan" />
       <PeriodBar period={period} onPeriodChange={setPeriod} data={r} onNavigate={setDate} />
 
+      {r && (
+        <div className="mb-4">
+          <DownloadButton path={`/api/export/report.xlsx?period=${r.period}&date=${r.range.from}`}>Unduh Excel</DownloadButton>
+        </div>
+      )}
       {report.isPending && <p className="text-muted">Memuat…</p>}
       {report.isError && <Notice tone="error">{report.error.message}</Notice>}
 
