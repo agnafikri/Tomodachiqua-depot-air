@@ -49,3 +49,9 @@ Saat dev, Vite meneruskan `/api` ke backend di port 4000, jadi `VITE_API_URL` di
 
 - Jangan commit `.env`. Hanya `.env.example` yang masuk repo.
 - Tes memakai database dari `DATABASE_URL`. Tes hanya membuat dan menghapus akun dengan username berawalan `tes_`, tetapi sebaiknya jalankan di database pengembangan, bukan produksi.
+
+## Ekspor dan impor Excel
+
+- **Unduh laporan:** tombol *Unduh Excel* di Laporan dan Keuangan (ADMIN dan PEMILIK).
+- **Cadangan lengkap, template, dan impor:** menu *Impor dan ekspor* (khusus ADMIN). Impor selalu diperiksa dulu (tidak ada yang tersimpan), lalu disimpan semua-atau-tidak-sama-sekali. Impor bisa dibatalkan dari riwayat impor.
+- Setelah memasang Fase 5, jalankan `npm install` di `backend/` (ada dependensi baru) lalu `npm run migrate`.

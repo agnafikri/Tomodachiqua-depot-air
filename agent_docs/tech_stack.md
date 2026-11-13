@@ -4,7 +4,7 @@ Gunakan versi stabil terbaru saat setup dan catat versinya di `package.json`.
 
 ## Backend (`backend/`)
 - Node.js LTS, ES Modules (`"type": "module"`), semua file `.mjs`, entry `server.mjs`
-- Express, `pg` (node-postgres), `zod`, `bcryptjs`, `jsonwebtoken`, `cookie-parser`, `cors`, `helmet`, `express-rate-limit`, `exceljs`, `multer`, `dotenv`
+- Express, `pg` (node-postgres), `zod`, `bcryptjs`, `exceljs` (ekspor/impor Excel), `multer` (unggah berkas, memori), `jsonwebtoken`, `cookie-parser`, `cors`, `helmet`, `express-rate-limit`, `exceljs`, `multer`, `dotenv`
 - Dev: `nodemon`; tes memakai `node:test` bawaan Node
 
 ## Frontend (`frontend/`)
