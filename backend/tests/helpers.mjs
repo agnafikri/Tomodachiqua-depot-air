@@ -15,10 +15,13 @@ export async function cleanup(prefix) {
   await pool.query(`DELETE FROM expenses WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM debt_waivers WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM payments WHERE created_by IN ${users}`);
+  await pool.query(`DELETE FROM payments WHERE import_batch_id IN (SELECT id FROM import_batches WHERE created_by IN ${users})`);
   await pool.query(`DELETE FROM personal_use WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM tank_refills WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM tank_adjustments WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM orders WHERE created_by IN ${users}`);
+  await pool.query(`DELETE FROM customers WHERE import_batch_id IN (SELECT id FROM import_batches WHERE created_by IN ${users})`);
+  await pool.query(`DELETE FROM import_batches WHERE created_by IN ${users}`);
   await pool.query("DELETE FROM customers WHERE name LIKE 'ZZTEST%'");
   await pool.query("DELETE FROM employees WHERE name LIKE 'ZZTEST%'");
   await pool.query(`DELETE FROM users WHERE username LIKE '${prefix}\\_%'`);
@@ -52,6 +55,22 @@ export async function createHarness(prefix) {
     });
     return res.headers.get('set-cookie').split(';')[0];
   }
+  // Unggah berkas (multipart) dan unduh berkas; mengembalikan status, header, dan isi.
+  async function upload(path, buffer, { fileName = 'data.xlsx', cookie } = {}) {
+    const form = new FormData();
+    if (buffer) form.append('file', new Blob([buffer]), fileName);
+    const res = await fetch(base + path, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'tomodachiqua', ...(cookie ? { Cookie: cookie } : {}) },
+      body: form,
+    });
+    return { status: res.status, json: await res.json().catch(() => null) };
+  }
+  async function download(path, cookie) {
+    const res = await fetch(base + path, { headers: { 'X-Requested-With': 'tomodachiqua', ...(cookie ? { Cookie: cookie } : {}) } });
+    const buf = Buffer.from(await res.arrayBuffer());
+    return { status: res.status, headers: res.headers, buffer: buf, json: res.headers.get('content-type')?.includes('json') ? JSON.parse(buf.toString()) : null };
+  }
   const admin = await login(`${prefix}_admin`);
   const pemilik = await login(`${prefix}_pemilik`);
 
@@ -62,7 +81,7 @@ export async function createHarness(prefix) {
   }
 
   return {
-    api, admin, pemilik, newCustomer,
+    api, admin, pemilik, newCustomer, upload, download, base,
     async close() {
       setClock();
       await cleanup(prefix);
