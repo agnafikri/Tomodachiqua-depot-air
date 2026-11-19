@@ -24,3 +24,5 @@ Frontend: `VITE_API_URL`
 - Backend: Render free web service (root `backend`, start `node server.mjs`, health check `GET /api/health`)
 - Database: Neon free
 - Catatan: server gratis tidur saat sepi dan butuh sekitar satu menit untuk bangun; frontend perlu menampilkan pesan "Menyiapkan server…". Cookie lintas domain memerlukan `sameSite=none; secure`. Verifikasi syarat tier gratis sebelum deploy.
+
+- Frontend dua halaman (multi-page Vite): landing statis di `/` dan aplikasi React di `/app/`; plugin `frontend/vite/landing-plugin.mjs` merender HTML landing dari `src/landing/content.mjs`, membuat robots.txt/sitemap.xml, dan memberi fallback SPA untuk `/app/*` di dev/preview.
