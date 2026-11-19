@@ -16,6 +16,8 @@ import expensesRouter from './routes/expenses.mjs';
 import importRouter from './routes/import.mjs';
 import ordersRouter from './routes/orders.mjs';
 import paymentsRouter from './routes/payments.mjs';
+import { publicRequestsRouter } from './routes/publicRequests.mjs';
+import serviceRequestsRouter from './routes/serviceRequests.mjs';
 import personalUseRouter from './routes/personalUse.mjs';
 import financeRouter from './routes/finance.mjs';
 import reportsRouter from './routes/reports.mjs';
@@ -23,7 +25,7 @@ import summaryRouter from './routes/summary.mjs';
 import tankRouter from './routes/tank.mjs';
 import wagesRouter from './routes/wages.mjs';
 
-export function createApp({ loginMax = 10 } = {}) {
+export function createApp({ loginMax = 10, publicMax = 5 } = {}) {
   const app = express();
 
   // Render berada di belakang proxy; perlu agar IP asli terbaca (rate limit).
@@ -63,6 +65,8 @@ export function createApp({ loginMax = 10 } = {}) {
   app.use('/api/tank', tankRouter);
   app.use('/api/personal-use', personalUseRouter);
   app.use('/api/expenses', expensesRouter);
+  app.use('/api/public', publicRequestsRouter({ max: publicMax })); // tanpa login (landing page)
+  app.use('/api/service-requests', serviceRequestsRouter);
   app.use('/api/export', exportRouter);
   app.use('/api/import', importRouter);
   app.use('/api/employees', employeesRouter);

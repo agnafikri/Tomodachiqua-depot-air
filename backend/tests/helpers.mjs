@@ -11,6 +11,7 @@ export const PASS = 'sandi-uji-123';
 
 export async function cleanup(prefix) {
   const users = `(SELECT id FROM users WHERE username LIKE '${prefix}\\_%')`;
+  await pool.query("DELETE FROM service_requests WHERE name LIKE 'ZZTEST%'");
   await pool.query(`DELETE FROM wage_slips WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM expenses WHERE created_by IN ${users}`);
   await pool.query(`DELETE FROM debt_waivers WHERE created_by IN ${users}`);
@@ -36,7 +37,7 @@ export async function createHarness(prefix) {
      ('Admin Uji', $2, $1, 'ADMIN'), ('Pemilik Uji', $3, $1, 'PEMILIK')`,
     [hash, `${prefix}_admin`, `${prefix}_pemilik`],
   );
-  const server = createApp({ loginMax: 1000 }).listen(0);
+  const server = createApp({ loginMax: 1000, publicMax: 1000 }).listen(0);
   const base = `http://127.0.0.1:${server.address().port}`;
 
   async function api(path, { method = 'GET', body, cookie } = {}) {
