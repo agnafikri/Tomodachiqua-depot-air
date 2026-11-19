@@ -35,8 +35,8 @@ npm test                 # menguji login dan pembatasan peran
 ```bash
 cd frontend
 npm install
-npm run dev              # http://localhost:5173
-npm test                 # menguji alur login/logout di React
+npm run dev              # landing: http://localhost:5173/   aplikasi: http://localhost:5173/app/
+npm test                 # menguji landing, formulir, dan semua layar aplikasi
 ```
 
 Saat dev, Vite meneruskan `/api` ke backend di port 4000, jadi `VITE_API_URL` dibiarkan kosong.
@@ -55,3 +55,10 @@ Saat dev, Vite meneruskan `/api` ke backend di port 4000, jadi `VITE_API_URL` di
 - **Unduh laporan:** tombol *Unduh Excel* di Laporan dan Keuangan (ADMIN dan PEMILIK).
 - **Cadangan lengkap, template, dan impor:** menu *Impor dan ekspor* (khusus ADMIN). Impor selalu diperiksa dulu (tidak ada yang tersimpan), lalu disimpan semua-atau-tidak-sama-sekali. Impor bisa dibatalkan dari riwayat impor.
 - Setelah memasang Fase 5, jalankan `npm install` di `backend/` (ada dependensi baru) lalu `npm run migrate`.
+
+## Landing page dan permintaan layanan
+
+- Halaman publik ada di `/`, aplikasi manajemen di `/app/` (login: `/app/login`). Pengunjung umum hanya melihat landing dan bisa mengirim permintaan pemasangan atau service lewat formulir; PEMILIK dan ADMIN menindaklanjutinya di menu **Layanan**.
+- **Mengubah isi landing:** edit `frontend/src/landing/content.mjs` (nomor WhatsApp, layanan, FAQ, foto, dan lainnya), lalu jalankan ulang `npm run dev` atau `npm run build`. Bagian yang masih kosong tidak ditampilkan.
+- **Alamat situs untuk Google:** isi `siteUrl` di `content.mjs` atau set variabel `VITE_SITE_URL` saat build. Dengan itu `sitemap.xml` dan alamat kanonik ikut dibuat.
+- Setelah memasang Fase 5B, jalankan `npm run migrate` (migrasi 008).
