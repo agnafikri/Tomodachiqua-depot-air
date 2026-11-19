@@ -7,6 +7,7 @@ import FinancePage from './pages/FinancePage.jsx';
 import HomePage from './pages/HomePage.jsx';
 import ImportExportPage from './pages/ImportExportPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import ServiceRequestsPage from './pages/ServiceRequestsPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderPage from './pages/OrderPage.jsx';
 import ReportPage from './pages/ReportPage.jsx';
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="stok" element={<TankPage />} />
           <Route path="laporan" element={<ReportPage />} />
           <Route path="keuangan" element={<FinancePage />} />
+          <Route path="layanan" element={<ServiceRequestsPage />} />
           <Route path="upah" element={<WagesPage />} />
           <Route path="upah/slip/:id" element={<SlipPage />} />
 

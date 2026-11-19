@@ -45,6 +45,41 @@ export function LinkButton({ to, className, children, variant = 'secondary', ...
   );
 }
 
+// Tautan keluar (mis. WhatsApp) yang tampil sebagai tombol.
+export function AnchorButton({ href, className, children, variant = 'primary', ...props }) {
+  const styles = {
+    primary: 'bg-brand text-white hover:bg-brand-dark',
+    secondary: 'border border-brand-line bg-white text-brand hover:bg-brand-soft',
+  };
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={cx('inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-base font-bold', styles[variant], className)} {...props}>
+      {children}
+    </a>
+  );
+}
+
+export const Textarea = forwardRef(function Textarea({ label, error, hint, className, id, ...props }, ref) {
+  const autoId = useId();
+  const areaId = id || autoId;
+  return (
+    <div className={className}>
+      <label htmlFor={areaId} className="mb-1.5 block text-sm font-semibold text-ink">
+        {label}
+      </label>
+      <textarea
+        ref={ref}
+        id={areaId}
+        rows={3}
+        aria-invalid={error ? 'true' : undefined}
+        className={cx('block w-full rounded-xl border bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70', error ? 'border-danger' : 'border-line')}
+        {...props}
+      />
+      {hint && !error && <p className="mt-1.5 text-sm text-muted">{hint}</p>}
+      {error && <p className="mt-1.5 text-sm font-medium text-danger">{error}</p>}
+    </div>
+  );
+});
+
 export const Input = forwardRef(function Input({ label, error, hint, className, id, trailing, ...props }, ref) {
   const autoId = useId();
   const inputId = id || autoId;

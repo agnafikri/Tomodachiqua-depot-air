@@ -65,12 +65,19 @@ function Summary() {
   if (summary.isPending) return <p className="mb-4 text-muted">Memuat ringkasan…</p>;
   if (summary.isError) return <Notice tone="error" className="mb-4">{summary.error.message}</Notice>;
 
-  const { orders, totalDebt, tank } = summary.data;
+  const { orders, totalDebt, tank, serviceRequests } = summary.data;
   const tankTone = { OK: 'ok', LOW: 'warn', CRITICAL: 'danger' }[tank.level] ?? 'ok';
   const tankText = tank.known ? formatLiters(Math.max(tank.remainingLiters, 0)) : 'Belum diatur';
   const days = tank.known ? daysLeftText(tank.daysLeft) : null;
 
   return (
+    <div className="space-y-3">
+    {serviceRequests?.new > 0 && (
+      <Link to="/layanan" className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-brand-line bg-brand-soft px-4 py-3 font-bold text-brand-deep hover:bg-brand-line/40">
+        <span>{serviceRequests.new} permintaan layanan baru</span>
+        <ChevronRight className="size-5 shrink-0" aria-hidden="true" />
+      </Link>
+    )}
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <Tile to="/order" title="Order hari ini" value={`${orders.orderCount} order`} sub={`${orders.gallons} galon · ${formatRupiah(orders.total)}`} />
       <Tile to="/utang" title="Total utang" value={formatRupiah(totalDebt)} valueClass={totalDebt > 0 ? 'text-danger' : 'text-ok'} sub={totalDebt > 0 ? 'Ketuk untuk melihat' : 'Tidak ada utang'} />
@@ -83,6 +90,7 @@ function Summary() {
       >
         {tank.known && <ProgressBar percent={tank.percent} tone={tankTone} label="Isi toren" />}
       </Tile>
+    </div>
     </div>
   );
 }

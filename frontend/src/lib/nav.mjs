@@ -3,6 +3,7 @@ import {
   FileSpreadsheet,
   FileText,
   Gauge,
+  Wrench,
   House,
   Banknote,
   PiggyBank,
@@ -20,6 +21,7 @@ export const NAV_ITEMS = [
   { to: '/stok', label: 'Stok', icon: Gauge, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Air di toren dan perkiraan kapan habis' },
   { to: '/laporan', label: 'Laporan', icon: FileText, roles: ['ADMIN', 'PEMILIK'], mobile: true, desc: 'Ringkasan harian, mingguan, dan bulanan' },
   { to: '/keuangan', label: 'Keuangan', icon: PiggyBank, roles: ['ADMIN', 'PEMILIK'], desc: 'Pemasukan, pengeluaran, dan saldo' },
+  { to: '/layanan', label: 'Layanan', icon: Wrench, roles: ['ADMIN', 'PEMILIK'], desc: 'Permintaan pemasangan dan service dari landing page' },
   { to: '/upah', label: 'Upah', icon: Banknote, roles: ['ADMIN', 'PEMILIK'], desc: 'Upah harian karyawan dan slip' },
   { to: '/admin/impor-ekspor', label: 'Impor dan ekspor', icon: FileSpreadsheet, roles: ['ADMIN'], desc: 'Cadangan Excel dan impor data lama' },
 ];

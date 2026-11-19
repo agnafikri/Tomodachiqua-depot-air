@@ -1,1 +1,2 @@
-/*  /index.html  200
+# Aplikasi React berada di /app: semua alamat di bawahnya memakai index.html aplikasi.
+/app/*  /app/index.html  200
