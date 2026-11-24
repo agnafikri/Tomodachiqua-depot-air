@@ -79,3 +79,5 @@ export function createApp({ loginMax = 10, publicMax = 5 } = {}) {
   app.use(errorHandler);
   return app;
 }
+
+export default createApp();
