@@ -1,3 +1,4 @@
-import app from '../src/app.mjs';
+import { createApp } from '../src/app.mjs';
 
+const app = createApp();
 export default app;
