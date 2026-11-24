@@ -49,12 +49,14 @@ export async function findActiveUser(id) {
   return rows[0] ?? null;
 }
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export function cookieOptions() {
   return {
     httpOnly: true,
     // Produksi: frontend (Cloudflare Pages) dan backend (Render) beda domain.
-    secure: env.isProduction,
-    sameSite: env.isProduction ? 'none' : 'lax',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     path: '/',
   };
 }
